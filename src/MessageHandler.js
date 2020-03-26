@@ -76,7 +76,7 @@ export default class MessageHandler {
                         embed.setColor("ORANGE");
                     });
 
-                    embeds.forEach(embed => msg.reply(embed).then(m => deleter.add(m)))
+                    embeds.forEach(embed => msg.reply(embed).then(m => deleter.add(m, 60000)))
 
                     break;
                 case "debug":
