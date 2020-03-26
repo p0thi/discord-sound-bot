@@ -22,6 +22,7 @@ export default class AudioManager {
         }
         console.log("playing sound:", sound)
         let dispatcher = connection.play(`${path.dirname(require.main.filename)}/sounds/${sound.filename}`);
+        dispatcher.setVolume(0.5);
 
         options.callback = (reason) => {
             console.log('file ended');

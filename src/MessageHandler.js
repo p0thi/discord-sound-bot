@@ -358,7 +358,7 @@ export default class MessageHandler {
                         return "Bitte gib den gewünschten Befehl ein, mit dem die Datei später abgespielt werden soll (ohne das \"!\" am Anfang)\n**(Zwischen 3 und 15 Zeichen)**";
                     },
                     acceptedAnswers(message, conv) {
-                        return /^[a-zA-ZäÄöÖüÜß]{3,15}$/.test(message.content.trim()) ? message.content : false;
+                        return /^[a-zA-Z0-9äÄöÖüÜß]{3,15}$/.test(message.content.trim()) ? message.content : false;
                     }
                 },
                 {
