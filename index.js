@@ -11,7 +11,7 @@ const bot = new Discord.Client();
 
 const token = process.env.NODE_ENV === 'production' ?
     "MjM0Mjc4MDEzMjI1Nzk1NTg1.XleTLg.xst7uw1B7YGfflZz9hsaCAlages" : // dev
-    "MjM0Mjc4MDEzMjI1Nzk1NTg1.XleTLg.xst7uw1B7YGfflZz9hsaCAlages"; // prod
+    "MTg1NTQ3Mjc2MTcxNjA4MDY0.Xn0fxg.9vsUG7EGvx8I0NJvm4XFtcdjQLU"; // prod
 
 bot.on("ready", () => {
     console.log("Bot is ready");
