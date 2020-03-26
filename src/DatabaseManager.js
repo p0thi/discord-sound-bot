@@ -10,14 +10,22 @@ export default class DatabaseManager {
     }
 
     connect() {
-        mongoose.connect('mongodb://localhost/' + this.path, { useNewUrlParser: true });
+        if(process.env.NODE_ENV === 'production') {
+            mongoose.connect('mongodb://localhost/' + this.path, { useNewUrlParser: true, auth: { user: "readWrite", password: "92783188152", authSource: "admin" } });
+        } else {
+            mongoose.connect('mongodb://localhost/' + this.path, { useNewUrlParser: true });
+        }
         this.db = mongoose.connection;
     }
 
     async getGuild(cond, content) {
         let guild = await Guild.model.findOne(cond).exec();
         if (!guild) {
-            guild = await Guild.model.create(content || cond);
+            try {
+                guild = await Guild.model.create(content || cond);
+            } catch (e) {
+                console.error(e);
+            }
         }
         return guild;
     }
@@ -25,6 +33,21 @@ export default class DatabaseManager {
     async getSound(cond) {
         let sound = await Sound.model.findOne(cond).exec();
         return sound;
+    }
+
+    async getSounds(cond) {
+        let sounds = await Sound.model.find(cond).exec();
+        return sounds;
+    }
+
+    async getSoundById(id) {
+        let sound = await Sound.model.findById(id).exec();
+        return sound;
+    }
+
+    async getAllGuildSounds(guild) {
+        let sounds = await Sound.model.find({guild});
+        return sounds;
     }
 
     async getUser(cond, content) {

@@ -10,24 +10,28 @@ export default class AudioManager {
 
     async play(sound, channel) {
         let connection = await channel.join();
-
+        
         if (!guildOptions.has(channel.guild.id)) {
             guildOptions.set(channel.guild.id, {});
         }
         let options = guildOptions.get(channel.guild.id);
-
+        
         
         if (options.dispatcher) {
-            options.dispatcher.off('end', options.callback);
+            options.dispatcher.off('finish', options.callback);
         }
-        const stream = fs.createReadStream(`${path.dirname(require.main.filename)}/sounds/${sound.filename}`)
-        let dispatcher = connection.playArbitraryInput(`${path.dirname(require.main.filename)}/sounds/${sound.filename}`);
+        console.log("playing sound:", sound)
+        let dispatcher = connection.play(`${path.dirname(require.main.filename)}/sounds/${sound.filename}`);
 
         options.callback = (reason) => {
-            connection.disconnect();
+            console.log('file ended');
+            setTimeout(() =>
+                    connection.disconnect(),
+                100
+            )
         }
         options.dispatcher = dispatcher;
 
-        dispatcher.on('end', options.callback);
+        dispatcher.on('finish', options.callback);
     }
 }

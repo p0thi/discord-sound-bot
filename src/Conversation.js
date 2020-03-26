@@ -32,8 +32,6 @@ export default class Conversation {
         this.errorCallback = errorCallback;
         this.ttl = ttl;
         this.confirmed = false;
-
-        this.sendNextCallToAction();
     }
 
     // Muster actionStack item:
@@ -107,11 +105,11 @@ export default class Conversation {
     }
 
     denyInput() {
-        this.triggerMessage.reply("Das verstehe ich leider nicht, oder ist keine gültige Eingabe. :/");
+        this.triggerMessage.reply("Das verstehe ich leider nicht, oder ist keine gültige Eingabe. :face_with_monocle:");
         this.sendNextCallToAction();
     }
 
-    sendNextCallToAction() {
+    async sendNextCallToAction() {
         let action = this.getCurrentAction();
         if (!action) {
             if (this.confirmed) {
@@ -122,7 +120,15 @@ export default class Conversation {
             }
             return
         }
-        this.triggerMessage.reply(action.message(this));
+        let messageReturn = await action.message(this);
+        if (Array.isArray(messageReturn)) {
+            for (let i = 0; i < messageReturn.length; i++) {
+                this.triggerMessage.reply(messageReturn[i]);
+            }
+        }
+        else {
+            this.triggerMessage.reply(messageReturn);
+        }
     }
 
     getCurrentAction() {
@@ -134,10 +140,10 @@ export default class Conversation {
     }
 
     confirm() {
-        let finalEmbed = new Discord.RichEmbed()
+        let finalEmbed = new Discord.MessageEmbed()
             .setTitle("Zusammenfassung")
             .setDescription("Sollen die untenstehenden Eingaben so gespeichert werden?\nMögliche Antworten: **Ja, Nein**")
-            .addBlankField();
+            .addField('\u200b', '\u200b');
 
         for (var item of this.actionStack) {
             finalEmbed.addField(item.title, this.resultToString(item.result), true);
@@ -157,10 +163,12 @@ export default class Conversation {
                 action.revert(this, action);
             }
         }
+        this.delete();
     }
 
     delete() {
         activeConversations[this.triggerMessage.author.id] = undefined;
+        clearTimeout(this.timeout);
     }
 
     checkDateValid() {
@@ -184,6 +192,9 @@ export default class Conversation {
         }
         else if (result.name) {
             return result.name;
+        }
+        else if (result.command) {
+            return result.command
         }
         else {
             return "Datei";
