@@ -7,7 +7,7 @@ import Discord from 'discord.js';
 const bot = new Discord.Client();
 
 
-
+console.log("starting for " + process.env.NODE_ENV);
 
 const token = process.env.NODE_ENV === 'production' ?
     "MjM0Mjc4MDEzMjI1Nzk1NTg1.XleTLg.xst7uw1B7YGfflZz9hsaCAlages" : // dev
