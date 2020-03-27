@@ -9,6 +9,9 @@ export default class AudioManager {
     }
 
     async play(sound, channel) {
+        if (!channel.joinable || !channel.speakable) {
+            return
+        }
         let connection = await channel.join();
         
         if (!guildOptions.has(channel.guild.id)) {
@@ -27,8 +30,9 @@ export default class AudioManager {
         options.callback = (reason) => {
             console.log('file ended');
             setTimeout(() =>
-                    connection.disconnect(),
-                100
+                    channel.leave(),
+                    // connection.disconnect(),
+                50
             )
         }
         options.dispatcher = dispatcher;

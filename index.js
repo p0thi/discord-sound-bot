@@ -4,27 +4,25 @@ import MessageHandler from './src/MessageHandler';
 import JoinHandler from './src/JoinHandler';
 import DatabaseManager from './src/DatabaseManager';
 import Discord from 'discord.js';
-const bot = new Discord.Client();
+const soundBot = new Discord.Client();
 
 
 console.log("starting for " + process.env.NODE_ENV);
 
-const token = process.env.NODE_ENV === 'production' ?
-"MTg1NTQ3Mjc2MTcxNjA4MDY0.Xn0fxg.9vsUG7EGvx8I0NJvm4XFtcdjQLU" : // prod
-    "MjM0Mjc4MDEzMjI1Nzk1NTg1.XleTLg.xst7uw1B7YGfflZz9hsaCAlages"; // dev
+const soundBotToken = process.env.SOUND_BOT_TOKEN; // dev
 
-bot.on("ready", () => {
+soundBot.on("ready", () => {
     console.log("Bot is ready");
 });
 
-const messageHandler = new MessageHandler(bot, "!");
+const messageHandler = new MessageHandler(soundBot, "!");
 messageHandler.start();
 
-const joinHandler = new JoinHandler(bot);
+const joinHandler = new JoinHandler(soundBot);
 joinHandler.start();
 
 const databaseManager = new DatabaseManager('discord');
 databaseManager.connect();
 
 
-bot.login(token);
+soundBot.login(soundBotToken);

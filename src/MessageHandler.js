@@ -113,6 +113,10 @@ export default class MessageHandler {
             }
 
             let args = msg.content.split(' ');
+            if (args[0].startsWith("!")) {
+                args[0] = args[0].substr(1);
+            }
+
             switch (args[0]) {
                 case 'ul':
                 case "upload": {
@@ -353,24 +357,6 @@ export default class MessageHandler {
             msg,
             [
                 {
-                    title: 'Befehl',
-                    message(conv) {
-                        return "Bitte gib den gewünschten Befehl ein, mit dem die Datei später abgespielt werden soll (ohne das \"!\" am Anfang)\n**(Zwischen 3 und 15 Zeichen)**";
-                    },
-                    acceptedAnswers(message, conv) {
-                        return /^[a-zA-Z0-9äÄöÖüÜß]{3,15}$/.test(message.content.trim()) ? message.content : false;
-                    }
-                },
-                {
-                    title: 'Beschreibung',
-                    message(conv) {
-                        return "Bitte gib eine kurze Beschreibung für den Befehl ein\n**(Zwischen 3 und 40 Zeichen)**";
-                    },
-                    acceptedAnswers(message, conv) {
-                        return /^.{3,40}$/.test(message.content.trim()) ? message.content : false;
-                    }
-                },
-                {
                     title: "Server",
                     message(conv) {
 
@@ -397,6 +383,44 @@ export default class MessageHandler {
                             return false;
                         }
                         return intersectingGuilds[number - 1];
+                    }
+                },
+                {
+                    title: 'Befehl',
+                    message(conv) {
+                        return `Bitte gib den gewünschten Befehl ein, mit dem die Datei später abgespielt werden soll (ohne das "${conv.actionStack[0].result.commandPrefix}" am Anfang)\n**(Zwischen 3 und 15 Zeichen)**`;
+                    },
+                    async acceptedAnswers(message, conv) {
+                        let command = message.content.trim();
+                        if (/^[a-zA-Z0-9äÄöÖüÜß]{3,15}$/.test(command)) {
+                            let guild = await dbManager.getGuild({ discordId: conv.actionStack[0].result.id});
+                            let sounds = await dbManager.getAllGuildSounds(guild)
+
+                            for (let sound of sounds) {
+                                if (sound.command === command) {
+                                    return false;
+                                }
+                            }
+
+                            let prohibitedCommands = ["help", "hilfe", "debug", "commands", "gif", "joke", "play", "random"];
+                            for (let item of prohibitedCommands) {
+                                if (item === command) {
+                                    return false;
+                                }
+                            }
+
+                            return command
+                        }
+                        return false;
+                    }
+                },
+                {
+                    title: 'Beschreibung',
+                    message(conv) {
+                        return "Bitte gib eine kurze Beschreibung für den Befehl ein\n**(Zwischen 3 und 40 Zeichen)**";
+                    },
+                    acceptedAnswers(message, conv) {
+                        return /^.{3,40}$/.test(message.content.trim()) ? message.content : false;
                     }
                 },
                 {
@@ -447,12 +471,11 @@ export default class MessageHandler {
             600000 /* 10 min = 600000 */,
             async (conv) => {
                 // let guild = Guild.model.findOne({discordId: conv.actionStack[1].id});
-                let guild = await dbManager.getGuild({ discordId: conv.actionStack[2].result.id });
+                let guild = await dbManager.getGuild({ discordId: conv.actionStack[0].result.id });
                 let creator = await dbManager.getUser({ discordId: conv.triggerMessage.author.id });
-                console.log('filename', conv.actionStack[2].result.filename);
                 let sound = await Sound.model.create({
-                    command: conv.actionStack[0].result,
-                    description: conv.actionStack[1].result,
+                    command: conv.actionStack[1].result,
+                    description: conv.actionStack[2].result,
                     filename: conv.actionStack[3].result.filename,
                     guild,
                     creator
