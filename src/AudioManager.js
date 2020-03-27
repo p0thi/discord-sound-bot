@@ -8,6 +8,19 @@ export default class AudioManager {
     constructor() {
     }
 
+    async playSound(sound, msg, deleter) {
+
+        if (sound) {
+            msg.reply("**" + sound.command + "** - " + sound.description).then(m => deleter.add(m));
+
+            if (msg.member.voice.channel) {
+                this.play(sound, msg.member.voice.channel).catch(err => console.error(err));
+            }
+        }
+        else {
+        }
+    }
+
     async play(sound, channel) {
         if (!channel.joinable || !channel.speakable) {
             return

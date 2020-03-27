@@ -51,6 +51,7 @@ export default class MessageHandler {
             const inputMessageDeleter = deleter.add(msg)
 
             let args = msg.content.substr(prefix.length).split(' ');
+            console.log("commands detected:", args[0]);
             switch (args[0]) {
                 case "joke":
                     let joke = await jokeHandler.getJoke();
@@ -61,7 +62,7 @@ export default class MessageHandler {
                     let gif = await jokeHandler.getGif(args[1]);
                     msg.reply(gif).then(m => deleter.add(m, 30000));
                     break;
-                case "commands":
+                case "commands": {
                     let guild = await dbManager.getGuild({ discordId: msg.guild.id });
                     console.log("guild", guild);
                     let sounds = await dbManager.getAllGuildSounds(guild);
@@ -77,8 +78,9 @@ export default class MessageHandler {
                     });
 
                     embeds.forEach(embed => msg.reply(embed).then(m => deleter.add(m, 60000)))
-
                     break;
+                }
+
                 case "debug":
                     console.log(msg.client.guilds.cache[0])
                     break;
@@ -86,23 +88,24 @@ export default class MessageHandler {
                 case "hilfe":
                     msg.reply("hättest du wohl gerne...").then(m => deleter.add(m))
                     break;
+                case "random": {
+                    deleter.add(msg, 0)
+                    let guild = await dbManager.getGuild({ discordId: msg.guild.id });
+                    let sound = await Sound.model.aggregate([{ $match: { guild: guild._id } }, { $sample: { size: 1 } }]);
+                    console.log(sound[0])
+                    // let sound = await dbManager.getSound({ command: args[0], guild: guild });
+                    audioManager.playSound(sound[0], msg, deleter)
+                    break;
+                }
                 default:
-                    dbManager.getGuild({ discordId: msg.guild.id }).then(guild => {
-                        dbManager.getSound({ command: args[0], guild: guild }).then(sound => {
-                            if (sound) {
-                                msg.reply("**" + sound.command + "** - " + sound.description).then(m => deleter.add(m));
+                    console.log('default')
+                    deleter.add(msg, 0)
+                    let guild = await dbManager.getGuild({ discordId: msg.guild.id })
+                    let sound = await dbManager.getSound({ command: args[0], guild: guild })
+                    console.log(sound)
+                    audioManager.playSound(sound, msg, deleter)
 
-                                clearTimeout(inputMessageDeleter);
-                                deleter.add(msg, 0)
 
-                                if (msg.member.voice.channel) {
-                                    audioManager.play(sound, msg.member.voice.channel).catch(err => console.error(err));
-                                }
-                            }
-                            else {
-                            }
-                        })
-                    });
             }
         }
         else if (msg.channel.type === "dm") {
@@ -393,7 +396,7 @@ export default class MessageHandler {
                     async acceptedAnswers(message, conv) {
                         let command = message.content.trim();
                         if (/^[a-zA-Z0-9äÄöÖüÜß]{3,15}$/.test(command)) {
-                            let guild = await dbManager.getGuild({ discordId: conv.actionStack[0].result.id});
+                            let guild = await dbManager.getGuild({ discordId: conv.actionStack[0].result.id });
                             let sounds = await dbManager.getAllGuildSounds(guild)
 
                             for (let sound of sounds) {
