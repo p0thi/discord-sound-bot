@@ -10,6 +10,7 @@ import path from 'path';
 import { parseFile } from 'music-metadata';
 import util from 'util';
 import { v4 as uuidv4 } from 'uuid';
+import log from '../log'
 import Sound from './models/Sound'
 import Guild from './models/Guild'
 import User from './models/User'
@@ -51,11 +52,11 @@ export default class MessageHandler {
             const inputMessageDeleter = deleter.add(msg)
 
             let args = msg.content.substr(prefix.length).split(' ');
-            console.log("commands detected:", args[0]);
+            log.info(`commands detected: ${args[0]}`);
             switch (args[0]) {
                 case "joke":
                     let joke = await jokeHandler.getJoke();
-                    console.log(joke);
+                    log.debug(joke);
                     msg.reply(joke).then(m => deleter.add(m, 30000));
                     break;
                 case "gif":
@@ -64,10 +65,8 @@ export default class MessageHandler {
                     break;
                 case "commands": {
                     let guild = await dbManager.getGuild({ discordId: msg.guild.id });
-                    console.log("guild", guild);
                     let sounds = await dbManager.getAllGuildSounds(guild);
 
-                    console.log("sounds", sounds)
 
                     let embeds = MessageHandler.createEmbeds(sounds, sound => {
                         return [prefix + sound.command, sound.description]
@@ -82,7 +81,7 @@ export default class MessageHandler {
                 }
 
                 case "debug":
-                    console.log(msg.client.guilds.cache[0])
+                    log.debug(msg.client.guilds.cache[0])
                     break;
                 case "help":
                 case "hilfe":
@@ -92,17 +91,16 @@ export default class MessageHandler {
                     deleter.add(msg, 0)
                     let guild = await dbManager.getGuild({ discordId: msg.guild.id });
                     let sound = await Sound.model.aggregate([{ $match: { guild: guild._id } }, { $sample: { size: 1 } }]);
-                    console.log(sound[0])
+                    log.debug(sound[0])
                     // let sound = await dbManager.getSound({ command: args[0], guild: guild });
                     audioManager.playSound(sound[0], msg, deleter)
                     break;
                 }
                 default:
-                    console.log('default')
+                    log.debug('default')
                     deleter.add(msg, 0)
                     let guild = await dbManager.getGuild({ discordId: msg.guild.id })
                     let sound = await dbManager.getSound({ command: args[0], guild: guild })
-                    console.log(sound)
                     audioManager.playSound(sound, msg, deleter)
 
 
@@ -188,12 +186,10 @@ export default class MessageHandler {
                         async (conv) => {
                             // let guild = Guild.model.findOne({discordId: conv.actionStack[1].id});
                             let guild = await dbManager.getGuild({ discordId: conv.actionStack[0].result.id });
-                            console.log("guild 1:", guild);
                             guild.joinSounds.set(msg.author.id, conv.actionStack[1].result);
-                            console.log("guild 2:", guild);
                             await guild.save();
                         },
-                        () => console.log("conversation error"))
+                        () => log.warn("conversation error"))
                     conversation.sendNextCallToAction();
                     break;
                 case "hilfe":
@@ -305,13 +301,12 @@ export default class MessageHandler {
                 async message(conv) {
                     let member = conv.actionStack[0].result.member(msg.author);
                     let guild = await dbManager.getGuild({ discordId: conv.actionStack[0].result.id })
-                    console.log("guild:", guild)
+                    console.debug(`guild: ${guild}`)
 
                     let relevantSounds = [];
 
                     if (member.hasPermission("ADMINISTRATOR")) {
                         relevantSounds = await dbManager.getAllGuildSounds(guild)
-                        console.log("all sounds:", relevantSounds)
                     }
                     else {
                         let dbUser = await dbManager.getUser({ discordId: member.id })
@@ -433,18 +428,18 @@ export default class MessageHandler {
                     },
                     async acceptedAnswers(message, conv) {
                         if (message.attachments.array().length === 0) {
-                            console.log("no attachments")
+                            log.warn("no attachments")
                             return false;
                         }
                         let att = message.attachments.first();
                         if (att.filesize > 750000) {
-                            console.log("too big")
+                            log.warn("too big")
                             return false;
                         }
                         let split = att.name.split('.');
                         let ext = split[split.length - 1];
                         if (!(ext == 'mp3' || ext == 'flac')) {
-                            console.log("wrong format", ext)
+                            log.warn(`wrong format ${ext}`)
                             return false;
                         }
 
@@ -483,9 +478,8 @@ export default class MessageHandler {
                     guild,
                     creator
                 });
-                console.log('sound', sound)
             },
-            () => console.log("conversation error"));
+            () => log.warn("conversation error"));
         return conv;
     }
 

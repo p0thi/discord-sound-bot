@@ -1,5 +1,6 @@
 import DatabaseManager from './DatabaseManager'
 import AudioManager from './AudioManager'
+import log from '../log'
 
 const dbManager = new DatabaseManager('discord');
 const audioManager = new AudioManager();
@@ -25,7 +26,6 @@ export default class JoinHandler {
                 }
                 
                 let guild = await dbManager.getGuild({ discordId: newState.guild.id });
-                console.log("guild:", guild)
                 let soundId = guild.joinSounds.get(newState.member.id)
 
                 if (!soundId) {

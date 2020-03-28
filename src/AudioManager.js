@@ -1,5 +1,6 @@
 import path from 'path';
 import fs from 'fs';
+import log from '../log'
 
 const guildQueues = new Map();
 const guildOptions = new Map();
@@ -26,9 +27,9 @@ export default class AudioManager {
             return
         }
 
-        console.log("joining channel...");
+        log.info(`joining channel ${channel.name}...`);
         let connection = await channel.join();
-        console.log("channel joined...");
+        log.info(`channel ${channel.name} joined...`);
 
         if (!guildOptions.has(channel.guild.id)) {
             guildOptions.set(channel.guild.id, {});
@@ -39,7 +40,7 @@ export default class AudioManager {
         if (options.dispatcher) {
             options.dispatcher.off('finish', options.callback);
         }
-        console.log("playing sound:", sound)
+        log.info(`playing sound ${sound.command}`)
 
         let filename = `${path.dirname(require.main.filename)}/sounds/${sound.filename}`;
 
@@ -47,11 +48,11 @@ export default class AudioManager {
 
 
         // let dispatcher = connection.play(`${path.dirname(require.main.filename)}/sounds/${sound.filename}`, { voume: .5 });
-        let dispatcher = connection.play(readStream, { voume: .5 });
+        let dispatcher = connection.play(readStream, { volume: .5, highWaterMark: 1 });
         
 
         options.callback = (reason) => {
-            console.log('file ended');
+            log.info('file ended');
             // connection.disconnect(),
             setTimeout(() =>
                 connection.disconnect(),

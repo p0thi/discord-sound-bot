@@ -4,15 +4,16 @@ import MessageHandler from './src/MessageHandler';
 import JoinHandler from './src/JoinHandler';
 import DatabaseManager from './src/DatabaseManager';
 import Discord from 'discord.js';
+import log from './log'
 const soundBot = new Discord.Client();
 
 
-console.log("starting for " + process.env.NODE_ENV);
+log.info("starting for " + process.env.NODE_ENV);
 
 const soundBotToken = process.env.SOUND_BOT_TOKEN; // dev
 
 soundBot.on("ready", () => {
-    console.log("Bot is ready");
+    log.info("Bot is ready");
 });
 
 const messageHandler = new MessageHandler(soundBot, "!");

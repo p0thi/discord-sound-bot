@@ -1,4 +1,5 @@
 import Discord from 'discord.js';
+import log from '../log.js'
 
 
 const activeConversations = {};
@@ -72,14 +73,14 @@ export default class Conversation {
             }
             else {
                 if (confirmRegex.test(message.content.trim())) {
-                    console.log("confirmed")
+                    log.info("coversation confirmed")
                     this.confirmed = true;
                     this.triggerMessage.reply("Okay. Ich habe alles so gespeichert.");
                     this.sendNextCallToAction();
                     return;
                 }
                 else if (denyRegex.test(message.content.trim())) {
-                    console.log("denied")
+                    log.info("coversation denied")
                     this.triggerMessage.reply("Okay. Der Vorgang wurde abgebrochen.");
                     this.abort();
                     this.errorCallback(this);
