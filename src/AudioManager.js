@@ -29,26 +29,33 @@ export default class AudioManager {
         console.log("joining channel...");
         let connection = await channel.join();
         console.log("channel joined...");
-        
+
         if (!guildOptions.has(channel.guild.id)) {
             guildOptions.set(channel.guild.id, {});
         }
         let options = guildOptions.get(channel.guild.id);
-        
-        
+
+
         if (options.dispatcher) {
             options.dispatcher.off('finish', options.callback);
         }
         console.log("playing sound:", sound)
-        let dispatcher = connection.play(`${path.dirname(require.main.filename)}/sounds/${sound.filename}`);
-        dispatcher.setVolume(0.5);
+
+        let filename = `${path.dirname(require.main.filename)}/sounds/${sound.filename}`;
+
+        let readStream = fs.createReadStream(filename);
+
+
+        // let dispatcher = connection.play(`${path.dirname(require.main.filename)}/sounds/${sound.filename}`, { voume: .5 });
+        let dispatcher = connection.play(readStream, { voume: .5 });
+        
 
         options.callback = (reason) => {
             console.log('file ended');
+            // connection.disconnect(),
             setTimeout(() =>
-                    channel.leave(),
-                    // connection.disconnect(),
-                50
+                connection.disconnect(),
+                100
             )
         }
         options.dispatcher = dispatcher;
