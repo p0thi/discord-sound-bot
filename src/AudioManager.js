@@ -25,7 +25,10 @@ export default class AudioManager {
         if (!channel.joinable || !channel.speakable) {
             return
         }
+
+        console.log("joining channel...");
         let connection = await channel.join();
+        console.log("channel joined...");
         
         if (!guildOptions.has(channel.guild.id)) {
             guildOptions.set(channel.guild.id, {});
