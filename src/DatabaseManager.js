@@ -75,6 +75,8 @@ export default class DatabaseManager {
         let file = await new Promise((resolve, reject) => {
             this.AudioFile.write(options, stream, (err, file) => {
                 if (err || !file) {
+                    log.error("Could not write file to DB");
+                    log.error(err);
                     reject();
                     return;
                 }
