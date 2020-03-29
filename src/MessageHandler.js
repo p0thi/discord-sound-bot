@@ -114,8 +114,8 @@ export default class MessageHandler {
 
                         sound.file = new dbManager.mongoose.Types.ObjectId(file._id);
                         log.debug("sound.file set");
-                        sound.filename = undefined;
-                        log.debug("sound.filename unset");
+                        // sound.filename = undefined;
+                        // log.debug("sound.filename unset");
                         try {
                             await sound.save()
                         }
