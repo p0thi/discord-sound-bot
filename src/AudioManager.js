@@ -1,9 +1,13 @@
 import path from 'path';
 import fs from 'fs';
+import DatabaseManager from './DatabaseManager';
+
 import log from '../log'
 
 const guildQueues = new Map();
 const guildOptions = new Map();
+
+const dbManager = new DatabaseManager('discord');
 
 export default class AudioManager {
     constructor() {
@@ -42,9 +46,19 @@ export default class AudioManager {
         }
         log.info(`playing sound ${sound.command}`)
 
-        let filename = `${path.dirname(require.main.filename)}/sounds/${sound.filename}`;
+        // let filename = `${path.dirname(require.main.filename)}/sounds/${sound.filename}`;
 
-        let readStream = fs.createReadStream(filename);
+        // let readStream = fs.createReadStream(filename);
+        let readStream;
+
+        try {
+            readStream = dbManager.getFileStream(sound.file);
+        }
+        catch (e) {
+            log.error(`Can't play in ${channel.name}`);
+            connection.disconnect();
+            return;
+        }
 
 
         // let dispatcher = connection.play(`${path.dirname(require.main.filename)}/sounds/${sound.filename}`, { voume: .5 });

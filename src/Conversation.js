@@ -191,6 +191,9 @@ export default class Conversation {
         else if (result.oldFilename) {
             return result.oldFilename;
         }
+        else if (result.dbFile) {
+            return result.dbFile.filename;
+        }
         else if (result.name) {
             return result.name;
         }

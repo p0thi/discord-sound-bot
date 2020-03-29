@@ -8,13 +8,12 @@ const logger = winston.createLogger({
     levels: {
         error: 0,
         warn: 1,
-        info: 2,
-        http: 3,
-        sql: 4,
-        debug: 5
+        silly: 2,
+        info: 3,
+        debug: 4,
       },
     transports: [
-        new winston.transports.Console({ /* colorize: true,  */format: winston.format.combine(
+        new winston.transports.Console({ level: 'debug', format: winston.format.combine(
             winston.format.timestamp(),
             winston.format.align(),
             winston.format.printf((info) => {
@@ -52,8 +51,8 @@ winston.addColors({
     error: 'red'
 });
 
-// logger.debug = function(arg) {
-//     logger.log('debug', arg);
-// }
+logger.debug = function(arg) {
+    logger.log('debug', arg);
+}
 
 export default logger

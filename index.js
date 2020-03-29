@@ -23,7 +23,5 @@ const joinHandler = new JoinHandler(soundBot);
 joinHandler.start();
 
 const databaseManager = new DatabaseManager('discord');
-databaseManager.connect();
-
 
 soundBot.login(soundBotToken);

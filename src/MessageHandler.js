@@ -5,9 +5,11 @@ import JokeHandler from './JokeHandler'
 import Discord from 'discord.js';
 import Conversation from './Conversation'
 import fs from 'fs';
+import stream from 'stream';
+import streamToBuffer from 'stream-to-buffer';
 import request from 'http-async';
 import path from 'path';
-import { parseFile } from 'music-metadata';
+import { parseFile, parseBuffer, parseStream } from 'music-metadata';
 import util from 'util';
 import { v4 as uuidv4 } from 'uuid';
 import log from '../log'
@@ -36,7 +38,7 @@ export default class MessageHandler {
     }
 
     start() {
-        this.bot.on('message', message => this.handle(message));
+        this.bot.on('message', message => { this.handle(message) });
     }
 
     async handle(msg) {
@@ -44,10 +46,12 @@ export default class MessageHandler {
             return;
         }
         if (msg.guild !== null) {
+            log.debug(`message detected: ${msg.content}`)
             let prefix = await MessageHandler.commandPrefix(msg.guild);
             if (!msg.content.startsWith(prefix)) {
                 return;
             }
+
 
             const inputMessageDeleter = deleter.add(msg)
 
@@ -83,6 +87,34 @@ export default class MessageHandler {
                 case "debug":
                     log.debug(msg.client.guilds.cache[0])
                     break;
+                case "migrate": {
+                    if (msg.author.id !== "173877595291648003") {
+                        return;
+                    }
+
+                    let allSounds = await dbManager.getSounds({});
+                    for (const sound of allSounds) {
+                        if (sound.file || !sound.filename) {
+                            log.warn(`sound "${sound.command}" not matching`)
+                            continue;
+                        }
+
+                        let filename = sound.filename;
+                        let filepath = `${path.dirname(require.main.filename)}/sounds/${filename}`
+                        let readstream = fs.createReadStream(filepath);
+                        let file = await dbManager.storeFile({ filename: sound.filename }, readstream);
+                        if (!file) {
+                            log.error(`Could not save File ${filename}`)
+                            continue;
+                        }
+
+                        sound.file = new dbManager.mongoose.Types.ObjectId(file._id);
+                        sound.filename = undefined;
+                        await sound.save()
+                        fs.unlink(filepath, () => {});
+                    }
+                    break;
+                }
                 case "help":
                 case "hilfe":
                     msg.reply("hättest du wohl gerne...").then(m => deleter.add(m))
@@ -386,7 +418,8 @@ export default class MessageHandler {
                 {
                     title: 'Befehl',
                     message(conv) {
-                        return `Bitte gib den gewünschten Befehl ein, mit dem die Datei später abgespielt werden soll (ohne das "${conv.actionStack[0].result.commandPrefix}" am Anfang)\n**(Zwischen 3 und 15 Zeichen)**`;
+                        let guild = dbManager.getGuild({ discordId: conv.actionStack[0].result.id })
+                        return `Bitte gib den gewünschten Befehl ein, mit dem die Datei später abgespielt werden soll (ohne das "${guild.commandPrefix}" am Anfang)\n**(Zwischen 3 und 15 Zeichen)**`;
                     },
                     async acceptedAnswers(message, conv) {
                         let command = message.content.trim();
@@ -400,7 +433,7 @@ export default class MessageHandler {
                                 }
                             }
 
-                            let prohibitedCommands = ["help", "hilfe", "debug", "commands", "gif", "joke", "play", "random"];
+                            let prohibitedCommands = ["help", "hilfe", "debug", "commands", "download", "gif", "joke", "play", "random"];
                             for (let item of prohibitedCommands) {
                                 if (item === command) {
                                     return false;
@@ -445,23 +478,45 @@ export default class MessageHandler {
 
                         let resp = await request('GET', att.url)
 
-                        const filename = `${split[0]}_${uuidv4()}.${ext}`;
-                        const filepath = `${path.dirname(require.main.filename)}/sounds/${filename}`;
-                        let fd = await open(filepath, 'w');
-                        await write(fd, resp.content, 0, resp.content.length, null);
+                        // //create buffer
+                        // let buffer = await new Promise((resolve, reject) => {
+                        //     let bufs = [];
+                        //     readstream.on('data', d => {
+                        //         bufs.push(d);
+                        //     });
+                        //     readstream.on('end', () => {
+                        //         resolve(Buffer.concat(bufs));
+                        //     });
+                        // })
+                        // console.log("buffer", buffer)
 
-                        let metadata = await parseFile(filepath)
+                        let metadata = await parseBuffer(resp.content)
+                        log.info(`file duration: ${metadata.format.duration} seconds`)
                         if (metadata.format.duration > 30) {
-                            unlink(filepath);
                             return false;
                         }
-                        return { filename, filepath, oldFilename: att.filename };
+
+                        const filename = `${split[0]}_${uuidv4()}.${ext}`;
+
+                        let downloadFileStream = new stream.PassThrough();
+                        downloadFileStream.end(resp.content);
+                        let soundFile = await dbManager.storeFile({ filename: att.name }, downloadFileStream)
+                        log.log('silly', soundFile)
+                        log.debug(`sound file downloaded: ${att.filename}`)
+
+                        let readstream = await dbManager.getFileStream(soundFile._id)
+                        readstream.on('error', err => { if (error) log.error(err) })
+
+
+                        return { filename, oldFilename: att.filename, dbFile: soundFile };
                     },
                     revert(conv, action) {
                         if (!action.result) {
                             return;
                         }
-                        fs.unlink(`${path.dirname(require.main.filename)}/sounds/${action.result.filename}`, (err) => { });
+                        action.result.dbFile.unlink(err => { if (error) log.error(err) })
+                        // dbManager.unlinkFile(action.result.dbFile._id);
+                        // fs.unlink(`${path.dirname(require.main.filename)}/sounds/${action.result.filename}`, (err) => { });
                     }
                 },
 
@@ -474,7 +529,8 @@ export default class MessageHandler {
                 let sound = await Sound.model.create({
                     command: conv.actionStack[1].result,
                     description: conv.actionStack[2].result,
-                    filename: conv.actionStack[3].result.filename,
+                    // filename: conv.actionStack[3].result.filename,
+                    file: conv.actionStack[3].result.dbFile,
                     guild,
                     creator
                 });
