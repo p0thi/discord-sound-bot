@@ -23,7 +23,7 @@ export default class DatabaseManager {
 
     async connect() {
         if (process.env.NODE_ENV === 'production') {
-            this.conn = await mongoose.connect('mongodb://localhost/' + this.path, { useNewUrlParser: true, auth: { user: "readWrite", password: "92783188152", authSource: "admin" } });
+            this.conn = await mongoose.connect('mongodb://localhost/' + this.path, { useNewUrlParser: true, auth: { user: "admin", password: "Fredert-152", authSource: "admin" } });
         } else {
             this.conn = await mongoose.connect('mongodb://localhost/' + this.path, { useNewUrlParser: true });
         }
