@@ -100,9 +100,13 @@ export default class MessageHandler {
                         }
 
                         let filename = sound.filename;
+                        log.debug("filename created");
                         let filepath = `${path.dirname(require.main.filename)}/sounds/${filename}`
+                        log.debug("filepath created");
                         let readstream = fs.createReadStream(filepath);
+                        log.debug("readstream created");
                         let file = await dbManager.storeFile({ filename: sound.filename }, readstream);
+                        log.debug("db-file created");
                         if (!file) {
                             log.error(`Could not save File ${filename}`)
                             continue;
