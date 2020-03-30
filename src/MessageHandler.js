@@ -82,29 +82,28 @@ export default class MessageHandler {
                         embed.setColor("ORANGE");
                     });
 
-                    embeds.forEach(embed => msg.reply(embed).then(m => deleter.add(m, 60000)))
+                    embeds.forEach(embed => msg.reply(embed).then(m => deleter.add(m, 120000)))
                     break;
                 }
                 case "download":
                 case "dl": {
                     let guild = await dbManager.getGuild({ discordId: msg.guild.id });
                     if (!args[1] || args[1].startsWith(guild.commandPrefix)) {
-                        msg.reply(`Bitte einen Befehl **ohne "${guild.commandPrefix}"** angeben`);
+                        msg.reply(`Bitte einen Befehl **ohne "${guild.commandPrefix}"** angeben`).then(m => deleter.add(m, 60000));
                         return;
                     }
                     let commandString = args[1].trim();
                     let sound = await dbManager.getSound({ guild, command: commandString })
                     if (!sound) {
-                        msg.reply(`Es wurde kein Sound mit dem Befehl **${commandString}** gefunden.`);
+                        msg.reply(`Es wurde kein Sound mit dem Befehl **${commandString}** gefunden.`).then(m => deleter.add(m, 60000));
                         return;
                     }
-                    sound.populate('file')
 
                     let stream = dbManager.getFileStream(sound.file._id);
                     let file = await dbManager.getFile(sound.file._id);
                     console.log(file)
                     let attachment = new MessageAttachment(stream, file.filename);
-                    msg.reply(`Hier hast du die Datei :)`, attachment);
+                    msg.reply(`Hier hast du die Datei :smirk:`, attachment).then(m => deleter.add(m, 60000));
                 }
                 case "debug":
                     log.debug(msg.client.guilds.cache[0])
@@ -158,7 +157,7 @@ export default class MessageHandler {
                     msg.reply("hättest du wohl gerne...").then(m => deleter.add(m))
                     break;
                 case "random": {
-                    deleter.add(msg, 0)
+                    deleter.add(msg, 2000)
                     let guild = await dbManager.getGuild({ discordId: msg.guild.id });
                     let sound = await Sound.model.aggregate([{ $match: { guild: guild._id } }, { $sample: { size: 1 } }]);
                     log.debug(sound[0])
@@ -167,8 +166,7 @@ export default class MessageHandler {
                     break;
                 }
                 default:
-                    log.debug('default')
-                    deleter.add(msg, 0)
+                    deleter.add(msg, 2000)
                     let guild = await dbManager.getGuild({ discordId: msg.guild.id })
                     let sound = await dbManager.getSound({ command: args[0], guild: guild })
                     audioManager.playSound(sound, msg, deleter)
