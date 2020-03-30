@@ -27,7 +27,7 @@ const audioManager = new AudioManager()
 const deleter = new MessageDeleter()
 const jokeHandler = new JokeHandler()
 
-const prohibitedCommands = ["help", "hilfe", "debug", "commands", "download", "gif", "joke", "play", "random"];
+const prohibitedCommands = ["help", "hilfe", "debug", "commands", "download", "dl", "gif", "joke", "play", "random"];
 
 export default class MessageHandler {
     constructor(bot) {
@@ -85,7 +85,8 @@ export default class MessageHandler {
                     embeds.forEach(embed => msg.reply(embed).then(m => deleter.add(m, 60000)))
                     break;
                 }
-                case "download": {
+                case "download":
+                case "dl": {
                     let guild = await dbManager.getGuild({ discordId: msg.guild.id });
                     if (!args[1] || args[1].startsWith(guild.commandPrefix)) {
                         msg.reply(`Bitte einen Befehl **ohne "${guild.commandPrefix}"** angeben`);
