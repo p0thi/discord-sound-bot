@@ -22,11 +22,8 @@ export default class DatabaseManager {
     }
 
     async connect() {
-        if (process.env.NODE_ENV === 'production') {
-            this.conn = await mongoose.connect('mongodb://localhost/' + this.path, { useNewUrlParser: true/* , auth: { user: "readWrite", password: "92783188152", authSource: "admin" }  */});
-        } else {
-            this.conn = await mongoose.connect('mongodb://localhost/' + this.path, { useNewUrlParser: true });
-        }
+        this.conn = await mongoose.connect('mongodb://localhost/' + this.path, { useNewUrlParser: true });
+
         // this.gfs = Grid(this.conn.db)
         // this.gfs.collection('sounds')
 
@@ -38,6 +35,17 @@ export default class DatabaseManager {
         })
     }
 
+    async getFile(_id) {
+        let file = await new Promise((resolve, reject) => {
+            this.AudioFile.findOne({_id}, (err, content) => {
+                if (err) {
+                    reject(err);
+                }
+                resolve(content);
+            })
+        });
+        return file;
+    }
 
     getFileStream(_id) {
         try {

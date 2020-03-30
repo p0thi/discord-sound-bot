@@ -2,7 +2,7 @@ import DatabaseManager from './DatabaseManager';
 import AudioManager from './AudioManager'
 import MessageDeleter from './MessageDeleter'
 import JokeHandler from './JokeHandler'
-import Discord from 'discord.js';
+import { MessageEmbed, MessageAttachment } from 'discord.js';
 import Conversation from './Conversation'
 import fs from 'fs';
 import stream from 'stream';
@@ -26,6 +26,8 @@ const dbManager = new DatabaseManager('discord');
 const audioManager = new AudioManager()
 const deleter = new MessageDeleter()
 const jokeHandler = new JokeHandler()
+
+const prohibitedCommands = ["help", "hilfe", "debug", "commands", "download", "gif", "joke", "play", "random"];
 
 export default class MessageHandler {
     constructor(bot) {
@@ -83,7 +85,26 @@ export default class MessageHandler {
                     embeds.forEach(embed => msg.reply(embed).then(m => deleter.add(m, 60000)))
                     break;
                 }
+                case "download": {
+                    let guild = await dbManager.getGuild({ discordId: msg.guild.id });
+                    if (!args[1] || args[1].startsWith(guild.commandPrefix)) {
+                        msg.reply(`Bitte einen Befehl **ohne "${guild.commandPrefix}"** angeben`);
+                        return;
+                    }
+                    let commandString = args[1].trim();
+                    let sound = await dbManager.getSound({ guild, command: commandString })
+                    if (!sound) {
+                        msg.reply(`Es wurde kein Sound mit dem Befehl **${commandString}** gefunden.`);
+                        return;
+                    }
+                    sound.populate('file')
 
+                    let stream = dbManager.getFileStream(sound.file._id);
+                    let file = await dbManager.getFile(sound.file._id);
+                    console.log(file)
+                    let attachment = new MessageAttachment(stream, file.filename);
+                    msg.reply(`Hier hast du die Datei :)`, attachment);
+                }
                 case "debug":
                     log.debug(msg.client.guilds.cache[0])
                     break;
@@ -122,11 +143,11 @@ export default class MessageHandler {
                         catch (e) {
                             log.error("Can't save sound")
                             log.error(e)
-                            file.unlink(() => {});
+                            file.unlink(() => { });
                             continue;
                         }
                         log.debug("sound saved");
-                        fs.unlink(filepath, () => {});
+                        fs.unlink(filepath, () => { });
                         log.debug("file deleted");
                     }
                     break;
@@ -449,7 +470,6 @@ export default class MessageHandler {
                                 }
                             }
 
-                            let prohibitedCommands = ["help", "hilfe", "debug", "commands", "download", "gif", "joke", "play", "random"];
                             for (let item of prohibitedCommands) {
                                 if (item === command) {
                                     return false;
@@ -557,14 +577,14 @@ export default class MessageHandler {
 
     static createEmbeds(list, itemToTtleAndDescription, modifyEmbed) {
         let embeds = [];
-        embeds.push(new Discord.MessageEmbed());
+        embeds.push(new MessageEmbed());
 
         for (let i = 0; i < list.length; i++) {
             let [title, description] = itemToTtleAndDescription(list[i], i);
             let embed = embeds[embeds.length - 1];
 
             if (embed.fields.length >= 25 || embed.length + title.length + description.length >= 6000) {
-                embeds.push(new Discord.MessageEmbed());
+                embeds.push(new MessageEmbed());
                 embed = embeds[embeds.length - 1];
             }
 
