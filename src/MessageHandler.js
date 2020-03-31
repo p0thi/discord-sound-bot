@@ -188,7 +188,7 @@ export default class MessageHandler {
                     // help
                     embed.addField(`${commandPrefix}help`, `Wow.... :smirk:`)
 
-                    embed.setFooter('Wenn du mir per DM **"help"** oder **"hilfe"** sendest, Sage ich dir, was du dort alles machen kannst.');
+                    embed.setFooter('Wenn du mir per DM "help" oder "hilfe" sendest, Sage ich dir, was du dort alles machen kannst.');
 
                     msg.reply(embed);
 
