@@ -190,7 +190,7 @@ export default class MessageHandler {
 
                     embed.setFooter('Wenn du mir per DM "help" oder "hilfe" sendest, Sage ich dir, was du dort alles machen kannst.');
 
-                    msg.reply(embed);
+                    msg.reply(embed).then(m => deleter.add(m));
 
                     break;
                 }
@@ -247,7 +247,7 @@ export default class MessageHandler {
                     //help
                     embed.addField(`help`, `Selbsterklärend :smirk:`)
 
-                    msg.reply(embed);
+                    msg.reply(embed).then(m => deleter.add(m));
                     break;
                 }
                 case 'ul':
