@@ -178,7 +178,6 @@ export default class MessageHandler {
 
                     // gif 
                     embed.addField(`${commandPrefix}gif <Begriff>`, `Lässt mich ein GIF senden, dass ich für <Begriff> finde.`)
-                    msg.reply("hättest du wohl gerne...").then(m => deleter.add(m))
 
                     // commands
                     embed.addField(`${commandPrefix}commands`, `Lässt mich alle Sound-Befehle anzeigen, die auf diesem Server verfügbar sind.`)
