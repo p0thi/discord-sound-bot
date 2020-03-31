@@ -35,8 +35,8 @@ export default class MessageHandler {
     }
 
     static async commandPrefix(guild) {
-        let discordGuild = await dbManager.getGuild({ discordId: guild.id });
-        return discordGuild.commandPrefix;
+        let dbGuild = await dbManager.getGuild({ discordId: guild.id });
+        return dbGuild.commandPrefix;
     }
 
     start() {
@@ -159,9 +159,42 @@ export default class MessageHandler {
                     break;
                 }
                 case "help":
-                case "hilfe":
+                case "hilfe": {
+                    let guild = await dbManager.getGuild({ discordId: msg.guild.id });
+                    let commandPrefix = guild.commandPrefix;
+                    let embed = new MessageEmbed();
+                    embed.setTitle("Hier findest du alle Befehle mit einer kurzen Beschreibung")
+                    embed.setDescription("Wer das liest ist doof :smile:")
+                    embed.setColor("ORANGE");
+
+                    // sound
+                    embed.addField(`${commandPrefix}<Sound>`, `Lässt mich den <Sound> spielen. Alle sounds können mit ${commandPrefix}commands eingesehen werden.`)
+
+                    // random
+                    embed.addField(`${commandPrefix}random`, `Lässt mich einen zufälligen Sound abspielen`)
+
+                    // joke
+                    embed.addField(`${commandPrefix}joke`, `Lässt mich dir einen zufälligen Witz senden.`)
+
+                    // gif 
+                    embed.addField(`${commandPrefix}gif <Begriff>`, `Lässt mich ein GIF senden, dass ich für <Begriff> finde.`)
                     msg.reply("hättest du wohl gerne...").then(m => deleter.add(m))
+
+                    // commands
+                    embed.addField(`${commandPrefix}commands`, `Lässt mich alle Sound-Befehle anzeigen, die auf diesem Server verfügbar sind.`)
+
+                    // download
+                    embed.addField(`${commandPrefix}download <Sound>`, `Lässt mich die Audiodatei von <Sound> senden. <Sound> ist ein Soundbefehl ohne "${commandPrefix}"`)
+
+                    // help
+                    embed.addField(`${commandPrefix}help`, `Wow.... :smirk:`)
+
+                    embed.setFooter('Wenn du mir per DM **"help"** oder **"hilfe"** sendest, Sage ich dir, was du dort alles machen kannst.');
+
+                    msg.reply(embed);
+
                     break;
+                }
                 case "random": {
                     deleter.add(msg, 2000)
                     let guild = await dbManager.getGuild({ discordId: msg.guild.id });
@@ -193,9 +226,40 @@ export default class MessageHandler {
             }
 
             switch (args[0]) {
+                case "help":
+                case "hilfe": {
+                    let embed = new MessageEmbed()
+                    embed.setTitle("Hier findest du alle Befehle mit einer kurzen Beschreibung")
+                    embed.setDescription("Wer das liest ist doof :smile:")
+                    embed.setColor("ORANGE");
+
+                    // upload
+                    embed.addField(`upload`, `Damit startest du den Prozess, um einen neuen Sound-Befehl für einen Server zu erstellen. Folge einfach den Anweisungen.`)
+
+                    // remove
+                    embed.addField(`remove`, `Damit startest du den Prozess, um einen deiner Soundbefehle von einem Server endgültig zu löschen.`)
+
+                    // joinsound
+                    embed.addField(`joinsound`, `Damit startest du den Prozess, um für einen Server einen Join-Sound fürr dich einzustellen`)
+
+                    //joinsounddelete
+                    embed.addField(`joinsounddelete`,`Damit startest du den Prozess, um für einen Server den Join-Sound auszuschalten`)
+
+                    //help
+                    embed.addField(`help`, `Selbsterklärend :smirk:`)
+
+                    msg.reply(embed);
+                    break;
+                }
                 case 'ul':
                 case "upload": {
                     let conv = this.startSoundUploadConv(msg);
+                    conv.sendNextCallToAction();
+                    break;
+                }
+                case "joindelete":
+                case "joinsounddelete": {
+                    let conv = this.startJoinSoundDeleteConv(msg);
                     conv.sendNextCallToAction();
                     break;
                 }
@@ -240,7 +304,21 @@ export default class MessageHandler {
                         {
                             title: "Befehl",
                             async message(conv) {
-                                return "Schreibe mir den Befehl **ohne \"" + await MessageHandler.commandPrefix(conv.actionStack[0].result) + "\"** am Anfang";
+                                let guild = await dbManager.getGuild({ discordId: conv.actionStack[0].result.id });
+                                let _id = guild.joinSounds.get(conv.triggerMessage.author.id);
+                                let currentCommand = await dbManager.getSound({ _id })
+                                log.debug(currentCommand)
+
+                                let message = "";
+                                if (!!currentCommand) {
+                                    message += `Der aktuelle Befehl für diesen Server ist **${guild.commandPrefix}${currentCommand.command}**\n`
+                                }
+                                else {
+                                    message += "Für diesen Server ist aktuell kein Befehl gesetzt\n"
+                                }
+                                message += `Schreibe mir den Befehl **ohne "${guild.commandPrefix}"** am Anfang`
+                                log.debug(message)
+                                return message;
                             },
                             result: undefined,
                             async acceptedAnswers(message, conv) {
@@ -260,7 +338,7 @@ export default class MessageHandler {
                         async (conv) => {
                             // let guild = Guild.model.findOne({discordId: conv.actionStack[1].id});
                             let guild = await dbManager.getGuild({ discordId: conv.actionStack[0].result.id });
-                            guild.joinSounds.set(msg.author.id, conv.actionStack[1].result);
+                            guild.joinSounds.set(conv.triggerMessage.author.id, conv.actionStack[1].result);
                             await guild.save();
                         },
                         () => log.warn("conversation error"))
@@ -299,6 +377,44 @@ export default class MessageHandler {
             return;
 
         }
+    }
+
+    startJoinSoundDeleteConv(msg) {
+        let conv = new Conversation(msg, [
+            {
+                title: "Server",
+                message(conv) {
+                    let intersectingGuilds = MessageHandler.getIntersectingGuildsOfAuthor(msg.author)
+
+                    let embeds = MessageHandler.createEmbeds(intersectingGuilds, (guild, i) => {
+                        return ["Nr. " + (i + 1), guild.name]
+                    }, (embed, i) => {
+                        embed.setTitle("Serverliste:")
+                        embed.setDescription("Für welchen Server willst du deinen Join-Sound deaktivieren? **(Bitte die Nummer angeben)**")
+                        embed.addField('\u200b', '\u200b');
+                        embed.setColor("ORANGE");
+                    });
+
+                    return embeds
+                },
+                acceptedAnswers(message, conv) {
+                    let number = parseInt(message.content.trim());
+                    if (isNaN(number)) {
+                        return false;
+                    }
+                    let intersectingGuilds = MessageHandler.getIntersectingGuildsOfAuthor(msg.author);
+                    if (number > intersectingGuilds.length || number < 1) {
+                        return false;
+                    }
+                    return intersectingGuilds[number - 1];
+                }
+            }
+        ], 600000, async conv => {
+            let guild = await dbManager.getGuild({ discordId: conv.actionStack[0].result.id });
+            guild.joinSounds.delete(conv.triggerMessage.author.id);
+            await guild.save();
+        }, () => { });
+        return conv;
     }
 
     startSoundDeleteConv(msg) {
