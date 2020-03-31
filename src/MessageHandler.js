@@ -247,7 +247,7 @@ export default class MessageHandler {
                     //help
                     embed.addField(`help`, `Selbsterklärend :smirk:`)
 
-                    msg.reply(embed).then(m => deleter.add(m));
+                    msg.reply(embed);
                     break;
                 }
                 case 'ul':
