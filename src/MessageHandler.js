@@ -578,6 +578,7 @@ export default class MessageHandler {
                     });
                 } catch (e) {
                     log.error(e)
+                    conv.actionStack[3].result.dbFile.unlink(err => { if (error) log.error(err) })
                 }
             },
             () => log.warn("conversation error"));
