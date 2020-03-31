@@ -115,6 +115,12 @@ export default class MessageHandler {
 
                     let allSounds = await dbManager.getSounds({});
                     for (const sound of allSounds) {
+                        if (!sound.filename) {
+                            sound.filename = undefined;
+                            sound.update();
+                        }
+                        continue;
+
                         if (sound.file || !sound.filename) {
                             log.warn(`sound "${sound.command}" not matching`)
                             continue;
@@ -561,14 +567,18 @@ export default class MessageHandler {
                 // let guild = Guild.model.findOne({discordId: conv.actionStack[1].id});
                 let guild = await dbManager.getGuild({ discordId: conv.actionStack[0].result.id });
                 let creator = await dbManager.getUser({ discordId: conv.triggerMessage.author.id });
-                let sound = await Sound.model.create({
-                    command: conv.actionStack[1].result,
-                    description: conv.actionStack[2].result,
-                    // filename: conv.actionStack[3].result.filename,
-                    file: conv.actionStack[3].result.dbFile,
-                    guild,
-                    creator
-                });
+                try {
+                    let sound = await Sound.model.create({
+                        command: conv.actionStack[1].result,
+                        description: conv.actionStack[2].result,
+                        // filename: conv.actionStack[3].result.filename,
+                        file: conv.actionStack[3].result.dbFile,
+                        guild,
+                        creator
+                    });
+                } catch (e) {
+                    log.error(e)
+                }
             },
             () => log.warn("conversation error"));
         return conv;
