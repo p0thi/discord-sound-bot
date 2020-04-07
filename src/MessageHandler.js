@@ -78,7 +78,7 @@ export default class MessageHandler {
                     let embeds = MessageHandler.createEmbeds(sounds, sound => {
                         return [prefix + sound.command, sound.description]
                     }, (embed, i) => {
-                        embed.setTitle("-> Hier gibt es eine Übericht <-");
+                        embed.setTitle("-> Hier gibt es eine Übersicht <-");
                         embed.setURL(`${process.env.BASE_URL}/#/guilds?guild=${msg.guild.id}`)
                         embed.setDescription(`**Audiobefehle:**`)
                         embed.setFooter(prefix + "help für weitere Informationen");
