@@ -15,8 +15,9 @@ const audioManager = new AudioManager();
 const router = express.Router()
 
 const playRateLimit = rateLimit({
-    windowMs: 17500,
+    windowMs: 15000,
     max: 2,
+    skipFailedRequests: true,
     message: {
         status: 'error',
         message: 'Rate limit'
@@ -35,7 +36,6 @@ const _sendError = (res, msg, code = 400) => {
 }
 
 router.get("/play", playRateLimit, async (req, res) => {
-    console.log(req.query)
     dbManager.Sound.model.findOne({ _id: req.query.id }).populate('guild').exec().then(sound => {
         const user = req.bot.users.cache.get(req.userId);
         console.log("user", user.id)
@@ -124,9 +124,10 @@ router.post('/upload', fileUpload(), async (req, res) => {
 
 router.delete('/delete', async (req, res) => {
 
-    const sound = await dbManager.Sound.model.findOne({ _id: req.body.sound }).populate('creator').exec();
-    const dbGuild = await dbManager.getGuild({ discordId: req.body.guild });
-    const botGuild = req.bot.guilds.cache.get(req.body.guild)
+    const sound = await dbManager.Sound.model.findOne({ _id: req.body.sound }).populate('creator').populate('guild').exec();
+    console.log("sound", sound)
+    const dbGuild = sound.guild
+    const botGuild = req.bot.guilds.cache.get(dbGuild.discordId)
 
     // console.log('botGuild', botGuild.id)
     // console.log('dbGuild', dbGuild.discordId)
@@ -142,7 +143,7 @@ router.delete('/delete', async (req, res) => {
         _sendError(res, "Discord guild not found", 404)
         return;
     }
-    
+
     if (!dbGuild) {
         _sendError(res, "Database guild not found", 404)
         return;

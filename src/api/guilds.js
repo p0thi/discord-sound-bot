@@ -26,7 +26,6 @@ router.get("/all", async (req, res) => {
                 response.json().then(async json => {
 
                     let botGuilds = req.bot.guilds.cache;
-                    console.log(botGuilds)
                     let userGuildIds = json.map(item => item.id);
 
                     let intersectingGuilds = await dbManager.Guild.model.aggregate([

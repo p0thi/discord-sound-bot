@@ -102,14 +102,12 @@ export default class DatabaseManager {
         try {
             unlinked = await new Promise((resolve, reject) => {
                 this.AudioFile.unlink(_id, (err, file) => {
-                    if (err) {
-                        reject(err);
-                    }
-                    else if (!file) {
+                    if (!file && err) {
                         reject()
                     }
-                    else 
-                    resolve(file);
+                    else {
+                        resolve(file);
+                    }
                 })
             })
         }
