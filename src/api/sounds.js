@@ -59,7 +59,6 @@ router.get("/play", playRateLimit, async (req, res) => {
 
 })
 
-
 router.post('/upload', fileUpload(), async (req, res) => {
 
     const guild = await dbManager.getGuild({ discordId: req.body.guild });
@@ -166,6 +165,39 @@ router.delete('/delete', async (req, res) => {
             status: 'error',
             message: 'Could not delete sound'
         })
+    }
+})
+
+router.post('/joinsound', async (req, res) => {
+    // console.log(req.body);
+    // _sendError(res,"baum")
+    // return;
+    let guild;
+    if (!req.body.sound) {
+        if (!req.body.guild) {
+            _sendError(res, "Join-Sound konnte nicht gesetzt bzw. gelöscht werden.")
+            return;
+        }
+
+        guild = await dbManager.getGuild({ discordId: req.body.guild });
+        guild.joinSounds.delete(req.userId)
+    }
+    else {
+        const sound = await dbManager.Sound.model.findOne({ _id: req.body.sound }).populate('guild').exec()
+        console.log("sound", sound)
+        guild = sound.guild;
+        guild.joinSounds.set(req.userId, sound._id)
+    }
+
+    try {
+        await guild.save();
+        res.status(200).send({
+            status: 'success',
+            message: 'Join-Sound erfolgreich geändert.'
+        })
+    } catch (e) {
+        _sendError(res, "Join-Sound konnte nicht gesetzt bzw. gelöscht werden.", 500)
+        return;
     }
 })
 
