@@ -58,6 +58,7 @@ export default {
             next()
         })
 
+        app.use('/api/user', require('./user'));
         app.use('/api/guilds', require('./guilds'));
         app.use('/api/sounds', require('./sounds'));
 
