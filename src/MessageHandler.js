@@ -28,7 +28,7 @@ const audioManager = new AudioManager()
 const deleter = new MessageDeleter()
 const jokeHandler = new JokeHandler()
 
-const prohibitedCommands = ["help", "hilfe", "debug", "commands", "download", "dl", "gif", "joke", "play", "random"];
+const BASE_URL = process.env.BASE_URL;
 
 export default class MessageHandler {
     constructor(bot) {
@@ -78,7 +78,9 @@ export default class MessageHandler {
                     let embeds = MessageHandler.createEmbeds(sounds, sound => {
                         return [prefix + sound.command, sound.description]
                     }, (embed, i) => {
-                        embed.setTitle(`Audiobefehle:`);
+                        embed.setTitle("-> Hier gibt es eine Übericht <-");
+                        embed.setURL(`${process.env.BASE_URL}/#/guilds?guild=${msg.guild.id}`)
+                        embed.setDescription(`Audiobefehle:`)
                         embed.setFooter(prefix + "help für weitere Informationen");
                         embed.setColor("ORANGE");
                     });
@@ -164,8 +166,9 @@ export default class MessageHandler {
                     let guild = await dbManager.getGuild({ discordId: msg.guild.id });
                     let commandPrefix = guild.commandPrefix;
                     let embed = new MessageEmbed();
-                    embed.setTitle("Hier findest du alle Befehle mit einer kurzen Beschreibung")
-                    embed.setDescription("Wer das liest ist doof :smile:")
+                    embed.setTitle("-> Hier klicken für weiter Informationen <-")
+                    embed.setURL(process.env.BASE_URL)
+                    embed.setDescription("**Hier findest du alle Befehle mit einer kurzen Beschreibung** :blush: ")
                     embed.setColor("ORANGE");
 
                     // sound
@@ -229,8 +232,9 @@ export default class MessageHandler {
                 case "help":
                 case "hilfe": {
                     let embed = new MessageEmbed()
-                    embed.setTitle("Hier findest du alle Befehle mit einer kurzen Beschreibung")
-                    embed.setDescription("Wer das liest ist doof :smile:")
+                    embed.setTitle("-> Hier klicken für weiter Informationen <-")
+                    embed.setURL(process.env.BASE_URL)
+                    embed.setDescription("**Hier findest du alle Befehle mit einer kurzen Beschreibung** :blush: ")
                     embed.setColor("ORANGE");
 
                     // upload
@@ -247,6 +251,7 @@ export default class MessageHandler {
 
                     //help
                     embed.addField(`help`, `Selbsterklärend :smirk:`)
+
 
                     msg.reply(embed);
                     break;
@@ -280,8 +285,7 @@ export default class MessageHandler {
                                 let embeds = MessageHandler.createEmbeds(intersectingGuilds, (guild, i) => {
                                     return ["Nr. " + (i + 1), guild.name]
                                 }, (embed, i) => {
-                                    embed.setTitle("Für welchen Server willst du diese Einstellung ändern?")
-                                    embed.setDescription("(Bitte die Nummer angeben)")
+                                    embed.setDescription("**Für welchen Server willst du diese Einstellung ändern?**\n(Bitte die Nummer angeben)")
                                     embed.addField('\u200b', '\u200b');
                                     embed.setColor("ORANGE");
                                 });
@@ -389,8 +393,7 @@ export default class MessageHandler {
                     let embeds = MessageHandler.createEmbeds(intersectingGuilds, (guild, i) => {
                         return ["Nr. " + (i + 1), guild.name]
                     }, (embed, i) => {
-                        embed.setTitle("Serverliste:")
-                        embed.setDescription("Für welchen Server willst du deinen Join-Sound deaktivieren? **(Bitte die Nummer angeben)**")
+                        embed.setDescription("*+Serverliste:**\nFür welchen Server willst du deinen Join-Sound deaktivieren? **(Bitte die Nummer angeben)**")
                         embed.addField('\u200b', '\u200b');
                         embed.setColor("ORANGE");
                     });
@@ -448,8 +451,7 @@ export default class MessageHandler {
                     let embeds = MessageHandler.createEmbeds(relevantGuilds, (guild, i) => {
                         return ["Nr. " + (i + 1), guild.name]
                     }, (embed, i) => {
-                        embed.setTitle("Serverliste:")
-                        embed.setDescription("Von welchem Server soll ein Befehl gelöscht werden? **(Bitte die Nummer angeben)**")
+                        embed.setDescription("**Serverliste:**\nVon welchem Server soll ein Befehl gelöscht werden? **(Bitte die Nummer angeben)**")
                         embed.addField('\u200b', '\u200b');
                         embed.setColor("ORANGE");
                     });
@@ -511,8 +513,7 @@ export default class MessageHandler {
                     let embeds = MessageHandler.createEmbeds(relevantSounds, (sound, i) => {
                         return [guild.commandPrefix + sound.command, sound.description]
                     }, (embed, i) => {
-                        embed.setTitle(`Folgende Audiobefehle können gelöscht werden:`);
-                        embed.setDescription("Befehl **ohne \"" + guild.commandPrefix + "\"** angeben");
+                        embed.setDescription("**Folgende Audiobefehle können gelöscht werden:**\nBefehl **ohne \"" + guild.commandPrefix + "\"** angeben");
                         embed.setColor("ORANGE");
                     });
                     return embeds;
@@ -553,8 +554,7 @@ export default class MessageHandler {
                         let embeds = MessageHandler.createEmbeds(intersectingGuilds, (guild, i) => {
                             return ["Nr. " + (i + 1), guild.name]
                         }, (embed, i) => {
-                            embed.setTitle("Serverliste:")
-                            embed.setDescription("Für welchen der folgenden Server soll der Befehl erstellt werden? **(Bitte die Nummer angeben)**")
+                            embed.setDescription("**Serverliste:**\nFür welchen der folgenden Server soll der Befehl erstellt werden? **(Bitte die Nummer angeben)**")
                             embed.addField('\u200b', '\u200b');
                             embed.setColor("ORANGE");
                         });
@@ -691,7 +691,7 @@ export default class MessageHandler {
             let sum = embeds.length
             modifyEmbed(embed, i)
             if (embeds.length > 1) {
-                embed.setTitle(embed.title + (sum > 1 ? " (" + (i + 1) + "/" + sum + ")" : ""))
+                embed.setDescription(embed.description + (sum > 1 ? "\nSeite (" + (i + 1) + "/" + sum + ")" : ""))
             }
         })
         return embeds;
