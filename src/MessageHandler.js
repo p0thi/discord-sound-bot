@@ -2,6 +2,7 @@ import DatabaseManager from './DatabaseManager';
 import AudioManager from './AudioManager'
 import MessageDeleter from './MessageDeleter'
 import JokeHandler from './JokeHandler'
+import SoundManager from './SoundManager'
 import { MessageEmbed, MessageAttachment } from 'discord.js';
 import Conversation from './Conversation'
 import fs from 'fs';
@@ -242,7 +243,7 @@ export default class MessageHandler {
                     embed.addField(`joinsound`, `Damit startest du den Prozess, um für einen Server einen Join-Sound fürr dich einzustellen`)
 
                     //joinsounddelete
-                    embed.addField(`joinsounddelete`,`Damit startest du den Prozess, um für einen Server den Join-Sound auszuschalten`)
+                    embed.addField(`joinsounddelete`, `Damit startest du den Prozess, um für einen Server den Join-Sound auszuschalten`)
 
                     //help
                     embed.addField(`help`, `Selbsterklärend :smirk:`)
@@ -532,8 +533,8 @@ export default class MessageHandler {
                     return dbUser._id.equals(sound.creator) ? sound : false;
                 }
             }
-        ], 600000, conv => {
-            fs.unlink(`${path.dirname(require.main.filename)}/sounds/${conv.actionStack[1].result.filename}`, (err) => { if (err) { console.error("Couldn't delete file", err) } });
+        ], 600000, async conv => {
+            await dbManager.unlinkFile(conv.actionStack[1].result.file)
             conv.actionStack[1].result.delete();
         }, () => { })
         return conv;
@@ -580,25 +581,13 @@ export default class MessageHandler {
                     },
                     async acceptedAnswers(message, conv) {
                         let command = message.content.trim();
-                        if (/^[a-zA-Z0-9äÄöÖüÜß]{3,15}$/.test(command)) {
-                            let guild = await dbManager.getGuild({ discordId: conv.actionStack[0].result.id });
-                            let sounds = await dbManager.getAllGuildSounds(guild)
-
-                            for (let sound of sounds) {
-                                if (sound.command === command) {
-                                    return false;
-                                }
-                            }
-
-                            for (let item of prohibitedCommands) {
-                                if (item === command) {
-                                    return false;
-                                }
-                            }
-
-                            return command
+                        let guild = await dbManager.getGuild({ discordId: conv.actionStack[0].result.id });
+                        const isSoundIllegal = await SoundManager.isCommandIllegal(command, guild)
+                        if (!!isSoundIllegal) {
+                            log.warn(isSoundIllegal)
+                            return false;
                         }
-                        return false;
+                        return command;
                     }
                 },
                 {
@@ -607,13 +596,18 @@ export default class MessageHandler {
                         return "Bitte gib eine kurze Beschreibung für den Befehl ein\n**(Zwischen 3 und 40 Zeichen)**";
                     },
                     acceptedAnswers(message, conv) {
-                        return /^.{3,40}$/.test(message.content.trim()) ? message.content : false;
+                        const descriptionIllegal = SoundManager.isDescriptionIllegal(message.content)
+                        if (!!descriptionIllegal) {
+                            log.warn(descriptionIllegal);
+                            return false;
+                        }
+                        return message.content;
                     }
                 },
                 {
                     title: "Audio Datei",
                     message(conv) {
-                        return "Bitte schicke mir eine Audiodatei im **MP3** oder **FLAC** Format.\nDie Datei darf nicht größer als 750kb sein."
+                        return "Bitte schicke mir eine Audiodatei im **MP3** oder **FLAC** Format.\nDie Datei darf nicht größer als 1MB und nicht länger als 30 Sekunden sein."
                     },
                     async acceptedAnswers(message, conv) {
                         if (message.attachments.array().length === 0) {
@@ -621,56 +615,35 @@ export default class MessageHandler {
                             return false;
                         }
                         let att = message.attachments.first();
-                        if (att.filesize > 750000) {
+
+                        const soundManager = new SoundManager();
+                        if (!soundManager.checkFileSize(att.size)) {
                             log.warn("too big")
                             return false;
                         }
-                        let split = att.name.split('.');
-                        let ext = split[split.length - 1];
-                        if (!(ext == 'mp3' || ext == 'flac')) {
-                            log.warn(`wrong format ${ext}`)
+
+                        if (!soundManager.checkFileExtension(att.name)) {
+                            log.warn(`wrong format`)
                             return false;
                         }
 
                         let resp = await request('GET', att.url)
 
-                        // //create buffer
-                        // let buffer = await new Promise((resolve, reject) => {
-                        //     let bufs = [];
-                        //     readstream.on('data', d => {
-                        //         bufs.push(d);
-                        //     });
-                        //     readstream.on('end', () => {
-                        //         resolve(Buffer.concat(bufs));
-                        //     });
-                        // })
-                        // console.log("buffer", buffer)
-
-                        let metadata = await parseBuffer(resp.content)
-                        log.info(`file duration: ${metadata.format.duration} seconds`)
-                        if (metadata.format.duration > 30) {
+                        if (!soundManager.checkFileMetadata(resp.content)) {
                             return false;
                         }
 
-                        const filename = `${split[0]}_${uuidv4()}.${ext}`;
+                        const filename = soundManager.createUniqueFilename(att.name);
 
-                        let downloadFileStream = new stream.PassThrough();
-                        downloadFileStream.end(resp.content);
-                        let soundFile = await dbManager.storeFile({ filename: att.name }, downloadFileStream)
-                        log.log('silly', soundFile)
-                        log.debug(`sound file downloaded: ${att.filename}`)
+                        const file = await soundManager.storeFile(resp.content)
 
-                        let readstream = await dbManager.getFileStream(soundFile._id)
-                        readstream.on('error', err => { if (error) log.error(err) })
-
-
-                        return { filename, oldFilename: att.filename, dbFile: soundFile };
+                        return { filename, oldFilename: att.filename, dbFile: file, soundManager: soundManager };
                     },
                     revert(conv, action) {
                         if (!action.result) {
                             return;
                         }
-                        action.result.dbFile.unlink(err => { if (error) log.error(err) })
+                        action.result.dbFile.unlink(err => { if (err) log.error(err) })
                         // dbManager.unlinkFile(action.result.dbFile._id);
                         // fs.unlink(`${path.dirname(require.main.filename)}/sounds/${action.result.filename}`, (err) => { });
                     }
@@ -680,20 +653,18 @@ export default class MessageHandler {
             600000 /* 10 min = 600000 */,
             async (conv) => {
                 // let guild = Guild.model.findOne({discordId: conv.actionStack[1].id});
-                let guild = await dbManager.getGuild({ discordId: conv.actionStack[0].result.id });
-                let creator = await dbManager.getUser({ discordId: conv.triggerMessage.author.id });
+                const guild = await dbManager.getGuild({ discordId: conv.actionStack[0].result.id });
+                const creator = await dbManager.getUser({ discordId: conv.triggerMessage.author.id });
+                const command = conv.actionStack[1].result;
+                const description = conv.actionStack[2].result;
+
+                const soundManager = conv.actionStack[3].result.soundManager
+
                 try {
-                    let sound = await Sound.model.create({
-                        command: conv.actionStack[1].result,
-                        description: conv.actionStack[2].result,
-                        // filename: conv.actionStack[3].result.filename,
-                        file: conv.actionStack[3].result.dbFile,
-                        guild,
-                        creator
-                    });
+                    await soundManager.createSound(command, description, guild, creator)
                 } catch (e) {
                     log.error(e)
-                    conv.actionStack[3].result.dbFile.unlink(err => { if (error) log.error(err) })
+                    soundManager.soundFile.unlink(err => { if (err) log.error(err) })
                 }
             },
             () => log.warn("conversation error"));

@@ -27,6 +27,9 @@ export default class DatabaseManager {
         // this.gfs = Grid(this.conn.db)
         // this.gfs.collection('sounds')
 
+        this.Sound = Sound;
+        this.User = User;
+        this.Guild = Guild;
 
         this.AudioFile = createModel({
             connection: this.conn.db,
@@ -95,14 +98,24 @@ export default class DatabaseManager {
     }
 
     async unlinkFile(_id) {
-        let unlinked = await new Promise((resolve, reject) => {
-            this.AudioFile.unlink({ _id }, (err, file) => {
-                if (err) {
-                    reject(err);
-                }
-                resolve(file);
+        let unlinked;
+        try {
+            unlinked = await new Promise((resolve, reject) => {
+                this.AudioFile.unlink(_id, (err, file) => {
+                    if (err) {
+                        reject(err);
+                    }
+                    else if (!file) {
+                        reject()
+                    }
+                    else 
+                    resolve(file);
+                })
             })
-        })
+        }
+        catch (e) {
+            throw new Error(e.message + _id);
+        }
         return unlinked;
     }
 

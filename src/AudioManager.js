@@ -10,8 +10,6 @@ const guildOptions = new Map();
 const dbManager = new DatabaseManager('discord');
 
 export default class AudioManager {
-    constructor() {
-    }
 
     async playSound(sound, msg, deleter) {
 
@@ -31,9 +29,9 @@ export default class AudioManager {
             return
         }
 
-        log.info(`joining channel ${channel.name}...`);
+        log.debug(`joining channel ${channel.name}...`);
         let connection = await channel.join();
-        log.info(`channel ${channel.name} joined...`);
+        log.debug(`channel ${channel.name} joined...`);
 
         if (!guildOptions.has(channel.guild.id)) {
             guildOptions.set(channel.guild.id, {});
@@ -41,40 +39,43 @@ export default class AudioManager {
         let options = guildOptions.get(channel.guild.id);
 
 
-        if (options.dispatcher) {
-            options.dispatcher.off('finish', options.callback);
-        }
-        log.info(`playing sound ${sound.command}`)
-
-        // let filename = `${path.dirname(require.main.filename)}/sounds/${sound.filename}`;
-
-        // let readStream = fs.createReadStream(filename);
-        let readStream;
-
-        try {
-            readStream = dbManager.getFileStream(sound.file);
-        }
-        catch (e) {
-            log.error(`Can't play in ${channel.name}`);
-            connection.disconnect();
-            return;
-        }
-
-
-        // let dispatcher = connection.play(`${path.dirname(require.main.filename)}/sounds/${sound.filename}`, { voume: .5 });
-        let dispatcher = connection.play(readStream, { volume: .5, highWaterMark: 1 });
         
+        return await new Promise((resolve, reject) => {
+            if (options.dispatcher) {
+                options.dispatcher.off('finish', options.callback);
+                options.resolve();
+            }
+            log.info(`playing sound ${sound.command}`)
 
-        options.callback = (reason) => {
-            log.info('file ended');
-            // connection.disconnect(),
-            setTimeout(() =>
-                connection.disconnect(),
-                100
-            )
-        }
-        options.dispatcher = dispatcher;
+            let readStream;
+    
+            try {
+                readStream = dbManager.getFileStream(sound.file);
+            }
+            catch (e) {
+                log.error(`Can't play in ${channel.name}`);
+                connection.disconnect();
+                reject();
+                return;
+            }
+    
+            let dispatcher = connection.play(readStream, { volume: .5, highWaterMark: 1 });
+            
+    
+            options.callback = (reason) => {
+                log.info('file ended');
+                options.dispatcher.off('finish', options.callback);
+                resolve();
+                setTimeout(() =>
+                    connection.disconnect(),
+                    100
+                )
+            }
+            options.dispatcher = dispatcher;
+            options.resolve = resolve;
+    
+            dispatcher.on('finish', options.callback);
+        })
 
-        dispatcher.on('finish', options.callback);
     }
 }

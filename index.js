@@ -3,6 +3,7 @@ require('dotenv').config()
 import MessageHandler from './src/MessageHandler';
 import JoinHandler from './src/JoinHandler';
 import DatabaseManager from './src/DatabaseManager';
+import expressServer from './src/api/express-server'
 import Discord from 'discord.js';
 import log from './log'
 const soundBot = new Discord.Client();
@@ -25,3 +26,5 @@ joinHandler.start();
 const databaseManager = new DatabaseManager('discord');
 
 soundBot.login(soundBotToken);
+
+expressServer.init(soundBot);
