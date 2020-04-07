@@ -80,7 +80,7 @@ export default class MessageHandler {
                     }, (embed, i) => {
                         embed.setTitle("-> Hier gibt es eine Übericht <-");
                         embed.setURL(`${process.env.BASE_URL}/#/guilds?guild=${msg.guild.id}`)
-                        embed.setDescription(`Audiobefehle:`)
+                        embed.setDescription(`**Audiobefehle:**`)
                         embed.setFooter(prefix + "help für weitere Informationen");
                         embed.setColor("ORANGE");
                     });
