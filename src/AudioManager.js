@@ -15,7 +15,7 @@ export default class AudioManager {
     async playSound(sound, msg, deleter) {
 
         if (sound) {
-            msg.reply("**" + sound.command + "** - " + sound.description).then(m => deleter.add(m, 10000));
+            // msg.reply("**" + sound.command + "** - " + sound.description).then(m => deleter.add(m, 10000));
 
             if (msg.member.voice.channel) {
                 this.play(sound, msg.member.voice.channel).catch(err => console.error(err));
