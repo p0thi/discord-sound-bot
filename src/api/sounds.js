@@ -15,7 +15,7 @@ const audioManager = new AudioManager();
 const router = express.Router()
 
 const playRateLimit = rateLimit({
-    windowMs: 15000,
+    windowMs: process.env.RATE_LIMIT_WINDOW || 15000,
     max: 2,
     skipFailedRequests: true,
     message: {

@@ -1,6 +1,7 @@
 import path from 'path';
 import fs from 'fs';
 import DatabaseManager from './DatabaseManager';
+import moment from 'moment';
 
 import log from '../log'
 
@@ -25,56 +26,98 @@ export default class AudioManager {
     }
 
     async play(sound, channel) {
-        if (!channel.joinable || !channel.speakable) {
-            return
-        }
+        return await new Promise(async (resolve, reject) => {
 
-        log.debug(`joining channel ${channel.name}...`);
-        let connection = await channel.join();
-        log.debug(`channel ${channel.name} joined...`);
+            if (!channel.joinable || !channel.speakable) {
+                return
+            }
 
-        if (!guildOptions.has(channel.guild.id)) {
-            guildOptions.set(channel.guild.id, {});
-        }
-        let options = guildOptions.get(channel.guild.id);
+            if (!guildOptions.has(channel.guild.id)) {
+                guildOptions.set(channel.guild.id, {});
+            }
+            let options = guildOptions.get(channel.guild.id);
 
+            log.debug(`joining channel...`);
+            let connection;
+            try {
+                if (options.connection && options.connection.status === 4) {
+                    if (options.disconnectTime) {
+                        const timeToWait = 300 - Math.abs(moment().diff(options.disconnectTime))
 
-        
-        return await new Promise((resolve, reject) => {
+                        if (timeToWait > 0) {
+                            log.debug(`waiting ${timeToWait} ms`)
+                            await new Promise((resolve) => {
+                                setTimeout(resolve, timeToWait)
+                            })
+                        }
+                    }
+                }
+                connection = await channel.join()
+            }
+            catch (err) {
+
+                try {
+                    channel.join()
+                    connection = await channel.join()
+                }
+                catch (e) {
+                    channel.leave()
+                    log.error("FATAL")
+                    reject();
+                    return;
+                }
+            }
+            log.debug(`channel joined...`);
+
+            connection.once('disconnect', () => { 
+                log.debug("connection disconnected...");
+                resolve();
+            })
+
             if (options.dispatcher) {
                 options.dispatcher.off('finish', options.callback);
+            }
+
+            if (options.resolve) {
                 options.resolve();
             }
+            options.resolve = resolve
+
+            options.connection = connection;
+
             log.info(`playing sound ${sound.command}`)
 
             let readStream;
-    
+
             try {
                 readStream = dbManager.getFileStream(sound.file);
             }
             catch (e) {
                 log.error(`Can't play in ${channel.name}`);
-                connection.disconnect();
+                // connection.disconnect();
+                channel.leave();
                 reject();
                 return;
             }
-    
+
             let dispatcher = connection.play(readStream, { volume: .5, highWaterMark: 1 });
-            
-    
-            options.callback = (reason) => {
-                log.info('file ended');
-                options.dispatcher.off('finish', options.callback);
-                resolve();
-                setTimeout(() =>
-                    connection.disconnect(),
+
+
+            options.callback = () => {
+                log.info('File ended');
+                setTimeout(() => {
+                    options.dispatcher.off('finish', options.callback);
+                    options.disconnectTime = moment();
+                    connection.disconnect();
+                    resolve();
+                },
                     100
                 )
             }
-            options.dispatcher = dispatcher;
-            options.resolve = resolve;
-    
             dispatcher.on('finish', options.callback);
+
+            options.dispatcher = dispatcher;
+
         })
 
     }
