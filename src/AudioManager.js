@@ -102,7 +102,6 @@ export default class AudioManager {
 
             let dispatcher = connection.play(readStream, { volume: .5, highWaterMark: 1 });
 
-
             options.callback = () => {
                 log.info('File ended');
                 setTimeout(() => {

@@ -94,16 +94,16 @@ export default class SoundManager {
         }
 
         if (/^.{0,2}$|^.{16,}$|^.*?(?=[\t\0\n\s\^#%&`="$\!§$?^*:<>\\\?\/\{\|\}]).*$/.test(command)) {
-            return "Command is to long, to short or contains illegal characters";
+            return "Befehl ist zu kurz, zu lang, oder enthält ungültige Zeichen";
         }
 
         if (await dbManager.Sound.model.countDocuments({ guild, command }) !== 0) {
-            return 'Command already exists';
+            return `Befehl ${command} existiert bereits`;
         }
 
         for (let item of prohibitedCommands) {
             if (item === command) {
-                return "This command is prohibited due to security reasons";
+                return `Der Befehl "${command}" ist anderen Funktionen vorbehalten`;
             }
         }
 
@@ -114,7 +114,7 @@ export default class SoundManager {
         if (/^.{3,60}$/.test(description.trim())) {
             return false
         }
-        return "Description too short or too long"
+        return "Beschreibung zu kurz oder zu lang."
     }
 
     static async deleteSound(sound) {

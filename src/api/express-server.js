@@ -1,6 +1,7 @@
 import express from 'express'
 import path from 'path'
 import bodyParser from 'body-parser'
+import cors from 'cors'
 
 import AuthManager from './managers/AuthManager'
 
@@ -17,11 +18,8 @@ export default {
         app.use(bodyParser.urlencoded({ extended: false }));
         app.use(bodyParser.json());
 
-        app.use(function (req, res, next) {
-            res.header("Access-Control-Allow-Origin", "*"); // update to match the domain you will make the request from
-            res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-            next();
-        });
+        // app.options('*', cors()) // include before other routes
+        app.use(cors());
 
         app.use((err, req, res, next) => {
             if (err) console.error(err);

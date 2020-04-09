@@ -82,22 +82,22 @@ router.post('/upload', fileUpload(), async (req, res) => {
     const file = req.files.file;
 
     if (!file) {
-        _sendError(res, 'File not provided')
+        _sendError(res, 'Keine Datei übermittelt')
         return;
     }
 
     if (!soundManager.checkFileSize(file.size)) {
-        _sendError(res, 'File too big');
+        _sendError(res, 'Datei ist zu groß');
         return;
     }
 
     if (!soundManager.checkFileExtension(file.name)) {
-        _sendError(res, 'Wrong file format');
+        _sendError(res, 'Falsches Dateiformat');
         return;
     }
 
     if (!soundManager.checkFileMetadata(file.data)) {
-        _sendError(res, "Audio to long ( >30 sek)");
+        _sendError(res, "Audio zu lang ( >30 sek)");
         return;
     }
 
