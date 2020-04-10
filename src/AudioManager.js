@@ -25,8 +25,8 @@ export default class AudioManager {
         }
     }
 
-    async play(sound, channel) {
-        return await new Promise(async (resolve, reject) => {
+    play(sound, channel) {
+        return new Promise(async (resolve, reject) => {
 
             if (!channel.joinable || !channel.speakable) {
                 return

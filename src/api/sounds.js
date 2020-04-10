@@ -38,16 +38,17 @@ const _sendError = (res, msg, code = 400) => {
 router.get("/play", playRateLimit, async (req, res) => {
     dbManager.Sound.model.findOne({ _id: req.query.id }).populate('guild').exec().then(sound => {
         const user = req.bot.users.cache.get(req.userId);
-        console.log("user", user.id)
         const discordGuild = req.bot.guilds.cache.get(sound.guild.discordId)
-        console.log("guild", discordGuild.id)
         const voiceState = discordGuild.member(user).voice
         const channel = voiceState.channel
+        const shouldBlock = req.query.block || true;
 
         if (!!channel) {
             audioManager.play(sound, channel).then(() => {
                 res.status(200).send();
             })
+            if (!shouldBlock)
+                res.status(200).send();
         }
         else {
             res.status(409).send({
