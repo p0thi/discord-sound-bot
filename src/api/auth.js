@@ -16,11 +16,11 @@ const router = express.Router()
 const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const BASE_URL = process.env.BASE_URL
-const redirect = encodeURIComponent(`${/* BASE_URL */'http://localhost'}/api/auth/callback`);
 
 router.post("/login", (req, res) => {
     // console.log("body", req.body)
     const code = req.body.code;
+    const redirect = encodeURIComponent(`${req.body.redirect}/api/auth/callback`);
     const creds = btoa(`${CLIENT_ID}:${CLIENT_SECRET}`);
     fetch(`https://discordapp.com/api/oauth2/token?grant_type=authorization_code&code=${code}&redirect_uri=${redirect}`,
         {
