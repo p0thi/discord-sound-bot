@@ -20,7 +20,7 @@ const BASE_URL = process.env.BASE_URL
 router.post("/login", (req, res) => {
     // console.log("body", req.body)
     const code = req.body.code;
-    const redirect = encodeURIComponent(`${req.body.redirect}/api/auth/callback`);
+    const redirect = encodeURIComponent(`${req.body.redirect}`);
     const creds = btoa(`${CLIENT_ID}:${CLIENT_SECRET}`);
     const url = `https://discordapp.com/api/oauth2/token?grant_type=authorization_code&code=${code}&redirect_uri=${redirect}`
     fetch(url,
