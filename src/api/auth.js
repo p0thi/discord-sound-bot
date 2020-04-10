@@ -16,7 +16,7 @@ const router = express.Router()
 const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const BASE_URL = process.env.BASE_URL
-const redirect = encodeURIComponent(`${BASE_URL}/api/auth/callback`);
+const redirect = encodeURIComponent(`${/* BASE_URL */'http://localhost'}/api/auth/callback`);
 
 router.post("/login", (req, res) => {
     // console.log("body", req.body)
