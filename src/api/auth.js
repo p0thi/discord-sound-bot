@@ -31,6 +31,13 @@ router.post("/login", (req, res) => {
         }).then(response => {
             response.json().then(json => {
                 log.debug(json)
+                if (json.error) {
+                    res.status(500).send({
+                        status: 'error',
+                        message: json.error_description,
+                    })
+                    return;
+                }
                 
                 let scopes = json.scope.split(' ');
                 if (!(scopes.includes('identify') && scopes.includes('guilds'))) {
