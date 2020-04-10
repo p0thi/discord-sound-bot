@@ -7,6 +7,7 @@ import moment from 'moment'
 import { catchAsync } from './utils'
 import DatabaseManager from '../DatabaseManager'
 import AuthManager from './managers/AuthManager'
+import log from '../../log'
 
 const dbManager = new DatabaseManager('discord');
 const authManager = new AuthManager();
@@ -29,6 +30,7 @@ router.post("/login", (req, res) => {
             },
         }).then(response => {
             response.json().then(json => {
+                log.debug(json)
                 
                 let scopes = json.scope.split(' ');
                 if (!(scopes.includes('identify') && scopes.includes('guilds'))) {
