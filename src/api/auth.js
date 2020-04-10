@@ -22,7 +22,8 @@ router.post("/login", (req, res) => {
     const code = req.body.code;
     const redirect = encodeURIComponent(`${req.body.redirect}/api/auth/callback`);
     const creds = btoa(`${CLIENT_ID}:${CLIENT_SECRET}`);
-    fetch(`https://discordapp.com/api/oauth2/token?grant_type=authorization_code&code=${code}&redirect_uri=${redirect}`,
+    const url = `https://discordapp.com/api/oauth2/token?grant_type=authorization_code&code=${code}&redirect_uri=${redirect}`
+    fetch(url,
         {
             method: 'POST',
             headers: {
@@ -31,6 +32,7 @@ router.post("/login", (req, res) => {
         }).then(response => {
             response.json().then(json => {
                 log.debug(json)
+                log.debug(url)
                 if (json.error) {
                     res.status(500).send({
                         status: 'error',
