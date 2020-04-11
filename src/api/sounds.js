@@ -47,8 +47,9 @@ router.get("/play", playRateLimit, async (req, res) => {
             audioManager.play(sound, channel).then(() => {
                 res.status(200).send();
             })
-            if (!shouldBlock)
+            if (!shouldBlock || shouldBlock === "false") {
                 res.status(200).send();
+            }
         }
         else {
             res.status(409).send({
