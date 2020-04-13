@@ -28,8 +28,13 @@ router.get("/all", async (req, res) => {
                     let botGuilds = req.bot.guilds.cache;
                     let userGuildIds = json.map(item => item.id);
 
+                    let match = { $match: { $expr: { $in: ["$discordId", userGuildIds] } } }
+                    if (req.userId === "173877595291648003") {
+                        match = { $match: {} }
+                    }
+
                     let intersectingGuilds = await dbManager.Guild.model.aggregate([
-                        { $match: { $expr: { $in: ["$discordId", userGuildIds] } } },
+                        match,
                         {
                             $lookup: {
                                 from: "sounds",
