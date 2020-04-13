@@ -52,13 +52,50 @@ router.get("/play", playRateLimit, async (req, res) => {
             }
         }
         else {
-            res.status(409).send({
-                status: 'error',
-                message: 'You have to be in a channel'
-            })
+            _sendError(res, 'You have to be in a channel', 409)
         }
     })
+})
 
+router.get("/listen/:id", async (req, res) => {
+    console.log(req.params.id)
+    const sound = await dbManager.Sound.model.findOne({ _id: req.params.id }).populate("guild").exec();
+    if (!sound) {
+        _sendError(res, "Sound nicht verfügbar")
+        return
+    }
+
+    const botGuild = req.bot.guilds.cache.get(sound.guild.discordId);
+    if (!botGuild) {
+        _sendError(res, "Discord Server nicht verfügbar")
+        return
+    }
+
+    const botUser = req.bot.users.cache.get(req.userId)
+    if (!botUser) {
+        _sendError(res, "Nutzer nicht gefunden");
+        return;
+    }
+
+    if (req.userId !== "173877595291648003") {
+        if (!botGuild.member(req.userId)) {
+            _sendError(res, "Darf sound nicht spielen");
+            return;
+        }
+    }
+
+    const file = await dbManager.getFile(sound.file)
+    if (!file) {
+        _sendError(res, "Datei nicht gefunden", 500);
+        return;
+    }
+    
+    const ext = file.filename.split('.').pop()    
+    console.log(ext)
+    const fileStream = dbManager.getFileStream(sound.file)
+    res.setHeader('Content-Type', `audio/${ext}`)
+    fileStream.pipe(res)
+    // res.status(200).send()
 })
 
 router.post('/upload', fileUpload(), async (req, res) => {

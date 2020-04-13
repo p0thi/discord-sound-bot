@@ -42,7 +42,7 @@ export default {
         app.use('/api/auth', require("./auth"));
 
         app.use((req, res, next) => {
-            let token = req.headers.authorization;
+            let token = req.headers.authorization || req.query.token;
             let verified = authManager.verifyToken(token)
             if (!token || !verified) {
                 return res.status(401).send({
