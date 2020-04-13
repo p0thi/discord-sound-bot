@@ -38,9 +38,35 @@ const _sendError = (res, msg, code = 400) => {
 router.get("/play", playRateLimit, async (req, res) => {
     dbManager.Sound.model.findOne({ _id: req.query.id }).populate('guild').exec().then(sound => {
         const user = req.bot.users.cache.get(req.userId);
+        if (!user) {
+            _sendError(res,"Benutzer nicht gefunden");
+            return;
+        }
+
         const discordGuild = req.bot.guilds.cache.get(sound.guild.discordId)
-        const voiceState = discordGuild.member(user).voice
+        if (!discordGuild) {
+            _sendError(res,"Discord Server nicht gefunden");
+            return;
+        }
+
+        const guildMember = discordGuild.member(user);
+        if (!guildMember) {
+            _sendError(res,"Nutzer auf diesem Server nicht gefunden")
+            return
+        }
+
+        const voiceState = guildMember.voice
+        if (!voiceState) {
+            _sendError(res,"Voice Status des Users nicht ermittelbar")
+            return
+        }
+
         const channel = voiceState.channel
+        if (!channel) {
+            _sendError(res,"Voice channel nicht gefunden")
+            return
+        }
+        
         const shouldBlock = req.query.block || true;
 
         if (!!channel) {
@@ -89,7 +115,7 @@ router.get("/listen/:id", async (req, res) => {
         _sendError(res, "Datei nicht gefunden", 500);
         return;
     }
-    
+
     const ext = file.filename.split('.').pop()    
     console.log(ext)
     const fileStream = dbManager.getFileStream(sound.file)
