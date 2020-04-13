@@ -39,47 +39,44 @@ router.get("/play", playRateLimit, async (req, res) => {
     dbManager.Sound.model.findOne({ _id: req.query.id }).populate('guild').exec().then(sound => {
         const user = req.bot.users.cache.get(req.userId);
         if (!user) {
-            _sendError(res,"Benutzer nicht gefunden");
+            _sendError(res, "Benutzer nicht gefunden");
             return;
         }
 
         const discordGuild = req.bot.guilds.cache.get(sound.guild.discordId)
         if (!discordGuild) {
-            _sendError(res,"Discord Server nicht gefunden");
+            _sendError(res, "Discord Server nicht gefunden");
             return;
         }
 
         const guildMember = discordGuild.member(user);
         if (!guildMember) {
-            _sendError(res,"Nutzer auf diesem Server nicht gefunden")
+            _sendError(res, "Nutzer auf diesem Server nicht gefunden")
             return
         }
 
         const voiceState = guildMember.voice
         if (!voiceState) {
-            _sendError(res,"Voice Status des Users nicht ermittelbar")
+            _sendError(res, "Voice Status des Users nicht ermittelbar")
             return
         }
 
         const channel = voiceState.channel
         if (!channel) {
-            _sendError(res,"Voice channel nicht gefunden")
+            _sendError(res, 'You have to be in a channel', 409)
             return
         }
-        
+
         const shouldBlock = req.query.block || true;
 
-        if (!!channel) {
-            audioManager.play(sound, channel).then(() => {
-                res.status(200).send();
-            })
-            if (!shouldBlock || shouldBlock === "false") {
-                res.status(200).send();
-            }
+        audioManager.play(sound, channel).then(() => {
+            res.status(200).send();
+        })
+        if (!shouldBlock || shouldBlock === "false") {
+            res.status(200).send();
         }
-        else {
-            _sendError(res, 'You have to be in a channel', 409)
-        }
+    }
+
     })
 })
 
@@ -116,7 +113,7 @@ router.get("/listen/:id", async (req, res) => {
         return;
     }
 
-    const ext = file.filename.split('.').pop()    
+    const ext = file.filename.split('.').pop()
     console.log(ext)
     const fileStream = dbManager.getFileStream(sound.file)
     res.setHeader('Content-Type', `audio/${ext}`)
