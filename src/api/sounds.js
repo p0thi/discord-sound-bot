@@ -75,7 +75,6 @@ router.get("/play", playRateLimit, async (req, res) => {
         if (!shouldBlock || shouldBlock === "false") {
             res.status(200).send();
         }
-    }
 
     })
 })
