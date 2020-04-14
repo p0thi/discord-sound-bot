@@ -262,4 +262,35 @@ router.post('/joinsound', async (req, res) => {
     }
 })
 
+router.get('/guildsounds/:id', async (req, res) => {
+    const botGuild = req.bot.guilds.cache.get(req.params.id)
+    if (!botGuild) {
+        _sendError(res,"Server nicht gefunden");
+        return;
+    }
+    if (!botGuild.member(req.userId)) {
+        _sendError(res,"Nutzer nicht auf dem Srever");
+        return;
+    }
+
+    const dbGuild = await dbManager.getGuild({ discordId: req.params.id})
+    if (!dbGuild) {
+        _sendError(res,"Server nicht in der Datenbank vorhanden.");
+        return;
+    }
+
+    let sounds = await dbManager.Sound.model.find({guild: dbGuild}).populate('creator').exec();
+    sounds = sounds.map(sound => {
+        return {
+            id: sound._id,
+            command: sound.command,
+            description: sound.description,
+            createdAt: sound.createdAt,
+            creator: sound.creator.discordId === req.userId
+        }
+    });
+
+    res.status(200).send(sounds);
+})
+
 module.exports = router;
