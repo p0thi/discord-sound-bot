@@ -29,7 +29,7 @@ router.get("/all", async (req, res) => {
                     let userGuildIds = json.map(item => item.id);
 
                     let match = { $match: { $expr: { $in: ["$discordId", userGuildIds] } } }
-                    if (req.userId === "173877595291648003") {
+                    if (req.userId === process.env.BOT_OWNER) {
                         match = { $match: {} }
                     }
 

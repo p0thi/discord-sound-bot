@@ -99,7 +99,7 @@ router.get("/listen/:id", async (req, res) => {
         return;
     }
 
-    if (req.userId !== "173877595291648003") {
+    if (req.userId !== process.env.BOT_OWNER) {
         if (!botGuild.member(req.userId)) {
             _sendError(res, "Darf sound nicht spielen");
             return;
@@ -268,7 +268,7 @@ router.get('/guildsounds/:id', async (req, res) => {
         _sendError(res,"Server nicht gefunden");
         return;
     }
-    if (!botGuild.member(req.userId) && req.userId !== "173877595291648003") {
+    if (!botGuild.member(req.userId) && req.userId !== process.env.BOT_OWNER) {
         _sendError(res,"Nutzer nicht auf dem Srever");
         return;
     }

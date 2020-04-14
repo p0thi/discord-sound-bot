@@ -112,7 +112,7 @@ export default class MessageHandler {
                     log.debug(msg.client.guilds.cache[0])
                     break;
                 case "migrate": {
-                    if (msg.author.id !== "173877595291648003") {
+                    if (msg.author.id !== process.env.BOT_OWNER) {
                         return;
                     }
 
