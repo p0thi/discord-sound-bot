@@ -35,14 +35,14 @@ router.get("/all", async (req, res) => {
 
                     let intersectingGuilds = await dbManager.Guild.model.aggregate([
                         match,
-                        // {
-                        //     $lookup: {
-                        //         from: "sounds",
-                        //         localField: "_id",
-                        //         foreignField: "guild",
-                        //         as: "sounds"
-                        //     }
-                        // },
+                        {
+                            $lookup: {
+                                from: "sounds",
+                                localField: "_id",
+                                foreignField: "guild",
+                                as: "sounds"
+                            }
+                        },
                         {
                             $project: {
                                 id: "$discordId",
@@ -66,18 +66,19 @@ router.get("/all", async (req, res) => {
                                         0
                                     ]
                                 },
-                                // sounds: {
-                                //     $map: {
-                                //         input: "$sounds",
-                                //         as: "sound",
-                                //         in: {
-                                //             id: "$$sound._id",
-                                //             command: "$$sound.command",
-                                //             description: "$$sound.description",
-                                //             creator: { $eq: ["$$sound.creator", user._id] }
-                                //         }
-                                //     }
-                                // }
+                                sounds: {
+                                    $size: "$sounds"
+                                    // $map: {
+                                    //     input: "$sounds",
+                                    //     as: "sound",
+                                    //     in: {
+                                    //         id: "$$sound._id",
+                                    //         command: "$$sound.command",
+                                    //         description: "$$sound.description",
+                                    //         creator: { $eq: ["$$sound.creator", user._id] }
+                                    //     }
+                                    // }
+                                }
                             }
                         },
                     ]).exec()
