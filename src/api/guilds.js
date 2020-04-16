@@ -89,6 +89,7 @@ router.get("/all", async (req, res) => {
                         guild.icon = botGuild.iconURL()
                         guild.name = botGuild.name
                         guild.owner = botGuild.ownerID === req.userId
+                        guild.editable = req.userId === process.env.BOT_OWNER || botGuild.member(req.userId).hasPermission("ADMINISTRATOR")
                     })
 
                     res.status(200).send(intersectingGuilds);
@@ -97,6 +98,73 @@ router.get("/all", async (req, res) => {
             }).catch(e => console.error(e))
         })
     })
+})
+
+router.post('/settings/:id', async (req, res) => {
+    if (!req.body) {
+        _sendError(res, "Keine Daten übermittelt");
+        return;
+    }
+
+    const botGuild = req.bot.guilds.cache.get(req.params.id);
+    if (!botGuild) {
+        _sendError(res, "Server konnte nicht gefunden werden");
+        return;
+    }
+
+    const botUser = botGuild.member(req.userId);
+    if (!botUser || (!botUser.hasPermission("ADMINISTRATOR") && req.userId !== process.env.BOT_OWNER)) {
+        _sendError(res, "Nutzer hat nicht die nötigen Rechte.");
+        return;
+    }
+
+    const dbGuild = await dbManager.getGuild({ discordId: req.params.id });
+
+    let returnObject = {};
+
+    if (req.body.commandPrefix) {
+        const validPrefixes = [
+            "!",
+            "#",
+            "+",
+            "-",
+            "$",
+            "§",
+            "%",
+            "&",
+            "\\",
+            "(",
+            ")",
+            "=",
+            "?",
+            ".",
+            ",",
+            "|",
+            "[",
+            "]",
+            "^",
+            "€"
+        ]
+        if (validPrefixes.includes(req.body.commandPrefix)) {
+            dbGuild.commandPrefix = req.body.commandPrefix
+            returnObject.commandPrefix = req.body.commandPrefix
+        }
+        else {
+            _sendError(res, `Des Kommando-Symbol ${req.body.commandPrefix} ist nicht gültig`)
+            return;
+        }
+    }
+
+    dbGuild.save().then(() => {
+        res.status(200).send({
+            status: "success",
+            message: "Alle Server-Daten erfolgreich gespeichert",
+            data: returnObject
+        })
+    })
+        .catch(() => {
+            _sendError(res, "Konnte nicht in die Datenbank schreiben", 500)
+        })
 })
 
 router.post('/favourite/:action', async (req, res) => {
@@ -110,7 +178,7 @@ router.post('/favourite/:action', async (req, res) => {
         return;
     }
 
-    const dbUser = await dbManager.getUser({ discordId: req.userId})
+    const dbUser = await dbManager.getUser({ discordId: req.userId })
 
     switch (req.params.action) {
         case 'add': {
