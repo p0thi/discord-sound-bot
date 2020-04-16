@@ -2,6 +2,7 @@ import express from 'express'
 import fetch from 'node-fetch'
 import DatabaseManager from '../DatabaseManager'
 import AuthManager from './managers/AuthManager'
+import { _sendError } from './utils'
 
 const authManager = new AuthManager();
 const dbManager = new DatabaseManager('discord')
@@ -96,6 +97,50 @@ router.get("/all", async (req, res) => {
             }).catch(e => console.error(e))
         })
     })
+})
+
+router.post('/favourite/:action', async (req, res) => {
+    if (!req.body.guild) {
+        _sendError(res, "Server nicht angegeben");
+        return;
+    }
+    const botGuild = req.bot.guilds.cache.get(req.body.guild)
+    if (!botGuild) {
+        _sendError(res, "Ungültiger Server angegeben");
+        return;
+    }
+
+    const dbUser = await dbManager.getUser({ discordId: req.userId})
+
+    switch (req.params.action) {
+        case 'add': {
+            if (!dbUser.favouriteGuilds.includes(req.body.guild)) {
+                dbUser.favouriteGuilds.push(req.body.guild)
+                await dbUser.save();
+            }
+            res.status(200).send({
+                status: "success",
+                message: "Server zu Favoriten hinzugefügt",
+                data: req.body.guild
+            })
+            break;
+        }
+        case 'remove': {
+            if (dbUser.favouriteGuilds.includes(req.body.guild)) {
+                dbUser.favouriteGuilds.splice(dbUser.favouriteGuilds.indexOf(req.body.guild), 1)
+                await dbUser.save();
+            }
+            res.status(200).send({
+                status: "success",
+                message: "Server von Favoriten entfernt",
+                data: req.body.guild
+            })
+            break;
+        }
+        default:
+            _sendError(res, 'Aktion nicht gültig')
+            return
+    }
 })
 
 module.exports = router;

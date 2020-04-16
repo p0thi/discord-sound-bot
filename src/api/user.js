@@ -8,13 +8,16 @@ const dbManager = new DatabaseManager('discord')
 
 const router = express.Router()
 
-router.get('/self', (req, res) => {
-    const user = req.bot.users.cache.get(req.userId);
+router.get('/self', async (req, res) => {
+    const botUser = req.bot.users.cache.get(req.userId);
+    const dbUser = await dbManager.getUser({ discordId: req.userId})
     res.status(200).send({
-        id: user.id,
-        username: user.username,
-        discriminator: user.discriminator,
-        displayAvatarURL: user.displayAvatarURL({ format: 'png', dynamic: true })
+        id: botUser.id,
+        username: botUser.username,
+        discriminator: botUser.discriminator,
+        favouriteGuilds: dbUser.favouriteGuilds || [],
+        favouriteSounds: dbUser.favouriteSounds || [],
+        displayAvatarURL: botUser.displayAvatarURL({ format: 'png', dynamic: true })
     })
 })
 

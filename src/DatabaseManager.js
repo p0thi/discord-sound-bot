@@ -59,29 +59,9 @@ export default class DatabaseManager {
             log.error(`Could not find file [${_id}] in db`);
             throw e;
         }
-
-
-        // let objId = new mongoose.Types.ObjectId(_id)
-        // let cond = { _id: objId }
-        // let exist = util.promisify(this.gfs.exist)
-        // let res = await exist(cond)
-        // if (!res) {
-        //     log.error("sound not found")
-        // }
-        // let readstream = this.gfs.createReadStream(cond)
-        // return readstream;
     }
 
     async storeFile(options, stream) {
-        // let writestrem = this.gfs.createWriteStream(options);
-        // stream.pipe(writestrem);
-        // let file = await new Promise((resolve, reject) => { writestrem.on("close", resolve) });
-        // console.log("sotred file:", file)
-        // return file
-
-        // let write = util.promisify(this.AudioFile.write);
-        // let file = await write(options, stream);
-        // console.log("file:", file)
 
         let file = await new Promise((resolve, reject) => {
             this.AudioFile.write(options, stream, (err, file) => {

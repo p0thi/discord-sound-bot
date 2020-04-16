@@ -7,6 +7,7 @@ import AudioManager from '../AudioManager'
 import SoundManager from '../SoundManager'
 import fileUpload from 'express-fileupload'
 import log from '../../log'
+import { _sendError } from './utils'
 
 const authManager = new AuthManager();
 const dbManager = new DatabaseManager('discord');
@@ -27,13 +28,13 @@ const playRateLimit = rateLimit({
     }
 })
 
-const _sendError = (res, msg, code = 400) => {
-    log.error(msg);
-    res.status(code).send({
-        status: 'error',
-        message: msg
-    });
-}
+// const _sendError = (res, msg, code = 400) => {
+//     log.error(msg);
+//     res.status(code).send({
+//         status: 'error',
+//         message: msg
+//     });
+// }
 
 router.get("/play", playRateLimit, async (req, res) => {
     dbManager.Sound.model.findOne({ _id: req.query.id }).populate('guild').exec().then(sound => {
@@ -291,6 +292,56 @@ router.get('/guildsounds/:id', async (req, res) => {
     });
 
     res.status(200).send(sounds);
+})
+
+router.post('/favourite/:action', async (req, res) => {
+    if (!req.body.sound) {
+        _sendError(res, "Sound nicht angegeben");
+        return;
+    }
+    const sound = await dbManager.Sound.model.findOne({_id: req.body.sound}).populate('guild').exec()
+    if (!sound) {
+        _sendError(res, "Ungültiger Sound angegeben");
+        return;
+    }
+
+    const botMember = req.bot.guilds.cache.get(sound.guild.discordId).member(req.userId);
+    if (!botMember && req.userId !== process.env.BOT_OWNER) {
+        _sendError(res, "Nutzer hat nicht die nötigen Rechte")
+        return;
+    }
+
+    const dbUser = await dbManager.getUser({ discordId: req.userId})
+
+    switch (req.params.action) {
+        case 'add': {
+            if (!dbUser.favouriteSounds.includes(req.body.sound)) {
+                dbUser.favouriteSounds.push(req.body.sound)
+                await dbUser.save();
+            }
+            res.status(200).send({
+                status: "success",
+                message: "Sound zu Favoriten hinzugefügt",
+                data: req.body.sound
+            })
+            break;
+        }
+        case 'remove': {
+            if (dbUser.favouriteSounds.includes(req.body.sound)) {
+                dbUser.favouriteSounds.splice(dbUser.favouriteSounds.indexOf(req.body.sound), 1)
+                await dbUser.save();
+            }
+            res.status(200).send({
+                status: "success",
+                message: "Server von Favoriten entfernt",
+                data: req.body.sound
+            })
+            break;
+        }
+        default:
+            _sendError(res, 'Aktion nicht gültig')
+            return
+    }
 })
 
 module.exports = router;
