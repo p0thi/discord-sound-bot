@@ -16,12 +16,12 @@ const audioManager = new AudioManager();
 const router = express.Router()
 
 const playRateLimit = rateLimit({
-    windowMs: process.env.RATE_LIMIT_WINDOW || 15000,
+    windowMs: process.env.RATE_LIMIT_WINDOW,
     max: 2,
     skipFailedRequests: true,
     message: {
         status: 'error',
-        message: 'Rate limit'
+        message: `2 Befehle alle ${Math.ceil(process.env.RATE_LIMIT_WINDOW / 1000)} Sekunden`
     },
     keyGenerator(req) {
         return req.userId
@@ -37,47 +37,75 @@ const playRateLimit = rateLimit({
 // }
 
 router.get("/play", playRateLimit, async (req, res) => {
-    dbManager.Sound.model.findOne({ _id: req.query.id }).populate('guild').exec().then(sound => {
-        const user = req.bot.users.cache.get(req.userId);
-        if (!user) {
-            _sendError(res, "Benutzer nicht gefunden");
+    if (!req.query.id) {
+        _sendError(res, 'Id nicht angegeben');
+        return;
+    }
+    log.silly(req.query.id)
+
+    let sound;
+    let dbGuild
+    if (req.query.id === "random" && req.query.guild) {
+        dbGuild = await dbManager.getGuild({ discordId: req.query.guild })
+        log.silly(dbGuild)
+        sound = (await dbManager.getRandomSoundForGuild(dbGuild._id))[0]
+        log.silly(sound)
+    }
+    else {
+        sound = await dbManager.getSoundById(req.query.id)
+        try {
+            dbGuild = await dbManager.getGuild({ _id: sound.guild })
+        }
+        catch(err) {
+            _sendError(res, "Server nicht in der Datenbank gefunden")
             return;
         }
+    }
 
-        const discordGuild = req.bot.guilds.cache.get(sound.guild.discordId)
-        if (!discordGuild) {
-            _sendError(res, "Discord Server nicht gefunden");
-            return;
-        }
+    if (!sound) {
+        _sendError(res, "Sound nicht gefunden");
+        return;
+    }
 
-        const guildMember = discordGuild.member(user);
-        if (!guildMember) {
-            _sendError(res, "Nutzer auf diesem Server nicht gefunden")
-            return
-        }
+    const user = req.bot.users.cache.get(req.userId);
+    if (!user) {
+        _sendError(res, "Benutzer nicht gefunden");
+        return;
+    }
 
-        const voiceState = guildMember.voice
-        if (!voiceState) {
-            _sendError(res, "Voice Status des Users nicht ermittelbar")
-            return
-        }
+    const discordGuild = req.bot.guilds.cache.get(dbGuild.discordId)
+    if (!discordGuild) {
+        _sendError(res, "Discord Server nicht gefunden");
+        return;
+    }
 
-        const channel = voiceState.channel
-        if (!channel) {
-            _sendError(res, 'You have to be in a channel', 409)
-            return
-        }
+    const guildMember = discordGuild.member(user);
+    if (!guildMember) {
+        _sendError(res, "Nutzer auf diesem Server nicht gefunden")
+        return
+    }
 
-        const shouldBlock = req.query.block || true;
+    const voiceState = guildMember.voice
+    if (!voiceState) {
+        _sendError(res, "Voice Status des Users nicht ermittelbar")
+        return
+    }
 
-        audioManager.play(sound, channel).then(() => {
-            res.status(200).send();
-        })
-        if (!shouldBlock || shouldBlock === "false") {
-            res.status(200).send();
-        }
+    const channel = voiceState.channel
+    if (!channel) {
+        _sendError(res, 'You have to be in a channel', 409)
+        return
+    }
 
+    const shouldBlock = req.query.block || true;
+
+    audioManager.play(sound, channel).then(() => {
+        res.status(200).send();
     })
+    if (!shouldBlock || shouldBlock === "false") {
+        res.status(200).send();
+    }
+
 })
 
 router.get("/listen/:id", async (req, res) => {
@@ -266,21 +294,21 @@ router.post('/joinsound', async (req, res) => {
 router.get('/guildsounds/:id', async (req, res) => {
     const botGuild = req.bot.guilds.cache.get(req.params.id)
     if (!botGuild) {
-        _sendError(res,"Server nicht gefunden");
+        _sendError(res, "Server nicht gefunden");
         return;
     }
     if (!botGuild.member(req.userId) && req.userId !== process.env.BOT_OWNER) {
-        _sendError(res,"Nutzer nicht auf dem Srever");
+        _sendError(res, "Nutzer nicht auf dem Srever");
         return;
     }
 
-    const dbGuild = await dbManager.getGuild({ discordId: req.params.id})
+    const dbGuild = await dbManager.getGuild({ discordId: req.params.id })
     if (!dbGuild) {
-        _sendError(res,"Server nicht in der Datenbank vorhanden.");
+        _sendError(res, "Server nicht in der Datenbank vorhanden.");
         return;
     }
 
-    let sounds = await dbManager.Sound.model.find({guild: dbGuild}).populate('creator').exec();
+    let sounds = await dbManager.Sound.model.find({ guild: dbGuild }).populate('creator').exec();
     sounds = sounds.map(sound => {
         return {
             id: sound._id,
@@ -299,7 +327,7 @@ router.post('/favourite/:action', async (req, res) => {
         _sendError(res, "Sound nicht angegeben");
         return;
     }
-    const sound = await dbManager.Sound.model.findOne({_id: req.body.sound}).populate('guild').exec()
+    const sound = await dbManager.Sound.model.findOne({ _id: req.body.sound }).populate('guild').exec()
     if (!sound) {
         _sendError(res, "Ungültiger Sound angegeben");
         return;
@@ -311,7 +339,7 @@ router.post('/favourite/:action', async (req, res) => {
         return;
     }
 
-    const dbUser = await dbManager.getUser({ discordId: req.userId})
+    const dbUser = await dbManager.getUser({ discordId: req.userId })
 
     switch (req.params.action) {
         case 'add': {
