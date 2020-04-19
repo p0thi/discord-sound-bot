@@ -124,6 +124,10 @@ export default class DatabaseManager {
         return sound;
     }
 
+    async getRandomSoundForGuild(guildId) {
+        return await Sound.model.aggregate([{ $match: { guild: guildId } }, { $sample: { size: 1 } }])
+    }
+
     async getAllGuildSounds(guild) {
         let sounds = await Sound.model.find({ guild });
         return sounds;
