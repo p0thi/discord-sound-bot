@@ -204,14 +204,14 @@ export default class MessageHandler {
                     let sound = await Sound.model.aggregate([{ $match: { guild: guild._id } }, { $sample: { size: 1 } }]);
                     log.debug(sound[0])
                     // let sound = await dbManager.getSound({ command: args[0], guild: guild });
-                    audioManager.playSound(sound[0], msg, deleter)
+                    audioManager.playSound(sound[0], msg, args)
                     break;
                 }
                 default:
                     deleter.add(msg, 2000)
                     let guild = await dbManager.getGuild({ discordId: msg.guild.id })
                     let sound = await dbManager.getSound({ command: args[0], guild: guild })
-                    audioManager.playSound(sound, msg, deleter)
+                    audioManager.playSound(sound, msg, args)
 
 
             }

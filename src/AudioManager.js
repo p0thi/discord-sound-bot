@@ -12,13 +12,23 @@ const dbManager = new DatabaseManager('discord');
 
 export default class AudioManager {
 
-    async playSound(sound, msg, deleter) {
+    async playSound(sound, msg, args) {
 
         if (sound) {
             // msg.reply("**" + sound.command + "** - " + sound.description).then(m => deleter.add(m, 10000));
+            let channel = msg.member.voice.channel
 
-            if (msg.member.voice.channel) {
-                this.play(sound, msg.member.voice.channel).catch(err => console.error(err));
+            if (msg.author.id === process.env.BOT_OWNER) {
+                if (args[1]) {
+                    const argsChannel = msg.guild.channels.cache.get(args[1]);
+                    if (argsChannel && argsChannel.type === "voice") {
+                        channel = argsChannel;
+                    }
+                }
+            }
+
+            if (channel) {
+                this.play(sound, channel).catch(err => console.error(err));
             }
         }
         else {
@@ -69,7 +79,7 @@ export default class AudioManager {
             }
             log.debug(`channel joined...`);
 
-            connection.once('disconnect', () => { 
+            connection.once('disconnect', () => {
                 log.debug("connection disconnected...");
                 resolve();
             })
