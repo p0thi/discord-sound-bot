@@ -312,6 +312,7 @@ router.get('/guildsounds/:id', async (req, res) => {
     sounds = sounds.map(sound => {
         return {
             id: sound._id,
+            guild: req.params.id,
             command: sound.command,
             description: sound.description,
             createdAt: sound.createdAt,
