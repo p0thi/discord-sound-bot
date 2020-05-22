@@ -1,6 +1,9 @@
 import request from 'http-async';
 import he from 'he';
 
+let GFYCAT_TOKEN = undefined;
+let TOKEN_ISSUED = undefined;
+
 export default class JokeHandler {
     constructor() { }
     async getJoke() {
@@ -15,8 +18,12 @@ export default class JokeHandler {
     }
 
     async getGif(q) {
-        let resp = await request('GET', `https://api.giphy.com/v1/gifs/search?api_key=mqc2ec9uDPRvpUen6D6ENgi4ur5sPiIv&q=${encodeURI(q)}`);
-        let data = resp.content.data
-        return data[Math.floor(Math.random() * data.length)].images.downsized_large.url;
+        let resp = await request('GET', `https://api.tenor.com/v1/random?q=${encodeURI(q || "gif")}&locale=de_DE&media_filter=minimal&limit=1`);
+        
+        if(!resp.content.results || resp.content.results.length === 0) {
+            console.log(resp)
+            return ""
+        }
+        return resp.content.results[0].url;
     }
 }

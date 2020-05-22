@@ -68,7 +68,7 @@ export default class MessageHandler {
                     break;
                 case "gif":
                     let gif = await jokeHandler.getGif(args[1]);
-                    msg.reply(`Powered by GIPHY ${gif}`).then(m => deleter.add(m, 30000));
+                    msg.reply(gif).then(m => deleter.add(m, 30000));
                     break;
                 case "commands": {
                     let guild = await dbManager.getGuild({ discordId: msg.guild.id });
