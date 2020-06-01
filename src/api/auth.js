@@ -22,13 +22,15 @@ router.post("/login", (req, res) => {
     const code = req.body.code;
     const redirect = encodeURIComponent(`${req.body.redirect}`);
     const creds = btoa(`${CLIENT_ID}:${CLIENT_SECRET}`);
-    const url = `https://discordapp.com/api/oauth2/token?grant_type=authorization_code&code=${code}&redirect_uri=${redirect}`
+    const url = `https://discord.com/api/oauth2/token`
+    const body = new URLSearchParams(`grant_type=authorization_code&code=${code}&redirect_uri=${redirect}`);
     fetch(url,
         {
             method: 'POST',
             headers: {
                 Authorization: `Basic ${creds}`,
             },
+            body
         }).then(response => {
             response.json().then(json => {
                 log.debug(json)
@@ -46,7 +48,7 @@ router.post("/login", (req, res) => {
                     res.status(400).send({status: 'error',error: `Wrong scopes: ${json.scopes}`})
                 }
 
-                fetch('https://discordapp.com/api/users/@me', { method: 'GET', headers: { Authorization: `Bearer ${json.access_token}` } })
+                fetch('https://discord.com/api/users/@me', { method: 'GET', headers: { Authorization: `Bearer ${json.access_token}` } })
                     .then(async resp => {
                         let userData = await resp.json();
                         let dbUser = await dbManager.getUser({ discordId: userData.id });
