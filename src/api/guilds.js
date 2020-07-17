@@ -13,7 +13,7 @@ router.get("/all", async (req, res) => {
     dbManager.getUser({ discordId: req.userId }).then(user => {
         authManager.getDiscordToken(user).then(token => {
             console.log(token)
-            fetch('https://discordapp.com/api//users/@me/guilds', {
+            fetch('https://discord.com/api/users/@me/guilds', {
                 method: 'GET', headers: { Authorization: `Bearer ${token}` }
             }).then(response => {
                 if (response.status !== 200) {

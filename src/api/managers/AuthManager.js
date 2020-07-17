@@ -29,7 +29,7 @@ export default class AuthManager {
         let expired = moment(user.expireDate).subtract(1, 'minutes').isSameOrBefore(moment());
 
         if (expired) {
-            let newResponse = await fetch(`https://discordapp.com/api/oauth2/token`,
+            let newResponse = await fetch(`https://discord.com/api/oauth2/token`,
             // let newResponse = await fetch(`https://enbzuqytumnlf.x.pipedream.net`,
                 {
                     method: 'POST',

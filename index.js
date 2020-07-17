@@ -1,4 +1,4 @@
-// https://discordapp.com/oauth2/authorize?client_id=234278013225795585&scope=bot&permissions=36830272
+// https://discord.com/oauth2/authorize?client_id=234278013225795585&scope=bot&permissions=36830272
 require('dotenv').config()
 import MessageHandler from './src/MessageHandler';
 import JoinHandler from './src/JoinHandler';
