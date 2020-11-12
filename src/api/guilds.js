@@ -3,6 +3,7 @@ import fetch from 'node-fetch'
 import DatabaseManager from '../DatabaseManager'
 import AuthManager from './managers/AuthManager'
 import { _sendError } from './utils'
+import log from '../../log'
 
 const authManager = new AuthManager();
 const dbManager = new DatabaseManager('discord')
@@ -84,17 +85,19 @@ router.get("/all", async (req, res) => {
                         },
                     ]).exec()
 
-                    console.log('intersecting guilds:', intersectingGuilds)
+                    log.silly('intersecting guilds:', intersectingGuilds)
                     intersectingGuilds.forEach(guild => {
+                        let botGuild = botGuilds.get(guild.id)
                         try {
-                            let botGuild = botGuilds.get(guild.id)
                             guild.icon = botGuild.iconURL()
                             guild.name = botGuild.name
                             guild.owner = botGuild.ownerID === req.userId
                             guild.editable = req.userId === process.env.BOT_OWNER || botGuild.member(req.userId).hasPermission("ADMINISTRATOR")
                         } catch (error) {
-                            console.error('ERROR:', error)
-                            console.log('in guild', botGuilds.get(guild.id).name)
+                            log.error('ERROR:', error)
+                            log.error("user id:", req.user.id)
+                            log.error('in guild', botGuilds.get(guild.id).name)
+                            log.error('bot guild', botGuild)
                         }
                     })
 
