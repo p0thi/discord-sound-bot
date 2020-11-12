@@ -11,7 +11,7 @@ const router = express.Router()
 
 router.get('/self', async (req, res) => {
     log.silly(req.userId)
-    const botUser = req.bot.users.cache.get(req.userId);
+    const botUser = await req.bot.users.fetch(req.userId);
     const dbUser = await dbManager.getUser({ discordId: req.userId})
     res.status(200).send({
         id: botUser.id,
