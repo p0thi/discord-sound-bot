@@ -279,8 +279,8 @@ export default class MessageHandler {
                     let actionStack = [
                         {
                             title: "Server",
-                            message(conv) {
-                                let intersectingGuilds = MessageHandler.getIntersectingGuildsOfAuthor(msg.author)
+                            async message(conv) {
+                                let intersectingGuilds = await MessageHandler.getIntersectingGuildsOfAuthor(msg.author)
 
                                 let embeds = MessageHandler.createEmbeds(intersectingGuilds, (guild, i) => {
                                     return ["Nr. " + (i + 1), guild.name]
@@ -293,12 +293,12 @@ export default class MessageHandler {
                                 return embeds
                             },
                             result: undefined,
-                            acceptedAnswers(message, conv) {
+                            async acceptedAnswers(message, conv) {
                                 let number = parseInt(message.content.trim());
                                 if (isNaN(number)) {
                                     return false;
                                 }
-                                let intersectingGuilds = MessageHandler.getIntersectingGuildsOfAuthor(msg.author);
+                                let intersectingGuilds = await MessageHandler.getIntersectingGuildsOfAuthor(msg.author);
                                 if (number > intersectingGuilds.length || number < 1) {
                                     return false;
                                 }
@@ -387,8 +387,8 @@ export default class MessageHandler {
         let conv = new Conversation(msg, [
             {
                 title: "Server",
-                message(conv) {
-                    let intersectingGuilds = MessageHandler.getIntersectingGuildsOfAuthor(msg.author)
+                async message(conv) {
+                    let intersectingGuilds = await MessageHandler.getIntersectingGuildsOfAuthor(msg.author)
 
                     let embeds = MessageHandler.createEmbeds(intersectingGuilds, (guild, i) => {
                         return ["Nr. " + (i + 1), guild.name]
@@ -400,12 +400,12 @@ export default class MessageHandler {
 
                     return embeds
                 },
-                acceptedAnswers(message, conv) {
+                async acceptedAnswers(message, conv) {
                     let number = parseInt(message.content.trim());
                     if (isNaN(number)) {
                         return false;
                     }
-                    let intersectingGuilds = MessageHandler.getIntersectingGuildsOfAuthor(msg.author);
+                    let intersectingGuilds = await MessageHandler.getIntersectingGuildsOfAuthor(msg.author);
                     if (number > intersectingGuilds.length || number < 1) {
                         return false;
                     }
@@ -425,12 +425,12 @@ export default class MessageHandler {
             {
                 title: "Server",
                 async message(conv) {
-                    let intersectingGuilds = MessageHandler.getIntersectingGuildsOfAuthor(msg.author)
+                    let intersectingGuilds = await MessageHandler.getIntersectingGuildsOfAuthor(msg.author)
 
                     let relevantGuilds = [];
                     for (let guild of intersectingGuilds) {
-                        let member = guild.member(msg.author);
-                        if (member.hasPermission("ADMINISTRATOR")) {
+                        let member = await guild.members.fetch(msg.author);
+                        if (member && member.hasPermission("ADMINISTRATOR")) {
                             relevantGuilds.push(guild);
                             continue;
                         }
@@ -464,11 +464,11 @@ export default class MessageHandler {
                         return false;
                     }
 
-                    let intersectingGuilds = MessageHandler.getIntersectingGuildsOfAuthor(msg.author)
+                    let intersectingGuilds = await MessageHandler.getIntersectingGuildsOfAuthor(msg.author)
 
                     let relevantGuilds = [];
                     for (let guild of intersectingGuilds) {
-                        let member = guild.member(msg.author);
+                        let member = await guild.member.fetch(msg.author);
                         if (member.hasPermission("ADMINISTRATOR")) {
                             relevantGuilds.push(guild);
                             continue;
@@ -491,7 +491,7 @@ export default class MessageHandler {
             {
                 title: "Befehl",
                 async message(conv) {
-                    let member = conv.actionStack[0].result.member(msg.author);
+                    let member = await conv.actionStack[0].result.members.fetch(msg.author);
                     let guild = await dbManager.getGuild({ discordId: conv.actionStack[0].result.id })
                     console.debug(`guild: ${guild}`)
 
@@ -519,7 +519,7 @@ export default class MessageHandler {
                     return embeds;
                 },
                 async acceptedAnswers(message, conv) {
-                    let member = conv.actionStack[0].result.member(msg.author);
+                    let member = await conv.actionStack[0].result.members.fetch(msg.author);
                     let dbGuild = await dbManager.getGuild({ discordId: conv.actionStack[0].result.id })
                     let sound = await dbManager.getSound({ guild: dbGuild, command: message.content.trim() })
 
@@ -547,9 +547,9 @@ export default class MessageHandler {
             [
                 {
                     title: "Server",
-                    message(conv) {
+                    async message(conv) {
 
-                        let intersectingGuilds = MessageHandler.getIntersectingGuildsOfAuthor(msg.author)
+                        let intersectingGuilds = await MessageHandler.getIntersectingGuildsOfAuthor(msg.author)
 
                         let embeds = MessageHandler.createEmbeds(intersectingGuilds, (guild, i) => {
                             return ["Nr. " + (i + 1), guild.name]
@@ -561,12 +561,12 @@ export default class MessageHandler {
 
                         return embeds
                     },
-                    acceptedAnswers(message, conv) {
+                    async acceptedAnswers(message, conv) {
                         let number = parseInt(message.content.trim());
                         if (isNaN(number)) {
                             return false;
                         }
-                        let intersectingGuilds = MessageHandler.getIntersectingGuildsOfAuthor(msg.author);
+                        let intersectingGuilds = await MessageHandler.getIntersectingGuildsOfAuthor(msg.author);
                         if (number > intersectingGuilds.length || number < 1) {
                             return false;
                         }
@@ -697,14 +697,12 @@ export default class MessageHandler {
         return embeds;
     }
 
-    static getIntersectingGuildsOfAuthor(author) {
+    static async getIntersectingGuildsOfAuthor(author) {
         let intersectingGuilds = [];
         for (let guild of author.client.guilds.cache.array()) {
-            for (let member of guild.members.cache.array()) {
-                if (author.id === member.id) {
-                    intersectingGuilds.push(guild);
-                    break;
-                }
+            let member = await guild.members.fetch(author)
+            if (member) {
+                intersectingGuilds.push(guild);
             }
         }
         return intersectingGuilds;

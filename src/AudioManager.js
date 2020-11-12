@@ -47,7 +47,6 @@ export default class AudioManager {
             }
             let options = guildOptions.get(channel.guild.id);
 
-            log.debug(`joining channel...`);
             let connection;
             try {
                 if (options.connection && options.connection.status === 4) {
@@ -77,10 +76,8 @@ export default class AudioManager {
                     return;
                 }
             }
-            log.debug(`channel joined...`);
 
             connection.once('disconnect', () => {
-                log.debug("connection disconnected...");
                 resolve();
             })
 
@@ -95,7 +92,7 @@ export default class AudioManager {
 
             options.connection = connection;
 
-            log.info(`playing sound ${sound.command}`)
+            log.info(`playing sound "${sound.command}" in ${channel.guild.name}`)
 
             let readStream;
 
@@ -113,7 +110,6 @@ export default class AudioManager {
             let dispatcher = connection.play(readStream, { volume: .5, highWaterMark: 1 });
 
             options.callback = () => {
-                log.info('File ended');
                 setTimeout(() => {
                     options.dispatcher.off('finish', options.callback);
                     options.disconnectTime = moment();

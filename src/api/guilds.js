@@ -85,7 +85,6 @@ router.get("/all", async (req, res) => {
                         },
                     ]).exec()
 
-                    log.silly('intersecting guilds:', intersectingGuilds)
                     intersectingGuilds.forEach(guild => {
                         let botGuild = botGuilds.get(guild.id)
                         try {

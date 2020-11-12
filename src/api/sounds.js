@@ -40,15 +40,12 @@ router.get("/play", playRateLimit, async (req, res) => {
         _sendError(res, 'Id nicht angegeben');
         return;
     }
-    log.silly(req.query.id)
 
     let sound;
     let dbGuild
     if (req.query.id === "random" && req.query.guild) {
         dbGuild = await dbManager.getGuild({ discordId: req.query.guild })
-        log.silly(dbGuild)
         sound = (await dbManager.getRandomSoundForGuild(dbGuild._id))[0]
-        log.silly(sound)
     }
     else {
         sound = await dbManager.getSoundById(req.query.id)
@@ -296,7 +293,8 @@ router.get('/guildsounds/:id', async (req, res) => {
         _sendError(res, "Server nicht gefunden");
         return;
     }
-    if (!botGuild.member(req.userId) && req.userId !== process.env.BOT_OWNER) {
+    log.warn(JSON.stringify(botGuild.members['cache']));
+    if (!(await botGuild.members.fetch(req.userId)) && req.userId !== process.env.BOT_OWNER) {
         _sendError(res, "Nutzer nicht auf dem Srever");
         return;
     }
