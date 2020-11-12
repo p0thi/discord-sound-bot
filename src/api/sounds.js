@@ -67,13 +67,13 @@ router.get("/play", playRateLimit, async (req, res) => {
         return;
     }
 
-    const user = req.bot.users.cache.get(req.userId);
+    const user = await req.bot.users.fetch(req.userId);
     if (!user) {
         _sendError(res, "Benutzer nicht gefunden");
         return;
     }
 
-    const discordGuild = req.bot.guilds.cache.get(dbGuild.discordId)
+    const discordGuild = await req.bot.guilds.fetch(dbGuild.discordId)
     if (!discordGuild) {
         _sendError(res, "Discord Server nicht gefunden");
         return;
@@ -116,13 +116,13 @@ router.get("/listen/:id", async (req, res) => {
         return
     }
 
-    const botGuild = req.bot.guilds.cache.get(sound.guild.discordId);
+    const botGuild = await req.bot.guilds.fetch(sound.guild.discordId);
     if (!botGuild) {
         _sendError(res, "Discord Server nicht verfügbar")
         return
     }
 
-    const botUser = req.bot.users.cache.get(req.userId)
+    const botUser = await req.bot.users.fetch(req.userId)
     if (!botUser) {
         _sendError(res, "Nutzer nicht gefunden");
         return;
@@ -216,7 +216,7 @@ router.delete('/delete', async (req, res) => {
     const sound = await dbManager.Sound.model.findOne({ _id: req.body.sound }).populate('creator').populate('guild').exec();
     console.log("sound", sound)
     const dbGuild = sound.guild
-    const botGuild = req.bot.guilds.cache.get(dbGuild.discordId)
+    const botGuild = await req.bot.guilds.fetch(dbGuild.discordId)
 
     // console.log('botGuild', botGuild.id)
     // console.log('dbGuild', dbGuild.discordId)
@@ -292,7 +292,7 @@ router.post('/joinsound', async (req, res) => {
 })
 
 router.get('/guildsounds/:id', async (req, res) => {
-    const botGuild = req.bot.guilds.cache.get(req.params.id)
+    const botGuild = await req.bot.guilds.fetch(req.params.id)
     if (!botGuild) {
         _sendError(res, "Server nicht gefunden");
         return;
@@ -334,7 +334,7 @@ router.post('/favourite/:action', async (req, res) => {
         return;
     }
 
-    const botMember = req.bot.guilds.cache.get(sound.guild.discordId).member(req.userId);
+    const botMember = await req.bot.guilds.fetch(sound.guild.discordId).member(req.userId);
     if (!botMember && req.userId !== process.env.BOT_OWNER) {
         _sendError(res, "Nutzer hat nicht die nötigen Rechte")
         return;

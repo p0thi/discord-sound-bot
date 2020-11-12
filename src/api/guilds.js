@@ -115,7 +115,7 @@ router.post('/settings/:id', async (req, res) => {
         return;
     }
 
-    const botGuild = req.bot.guilds.cache.get(req.params.id);
+    const botGuild = await req.bot.guilds.fetch(req.params.id);
     if (!botGuild) {
         _sendError(res, "Server konnte nicht gefunden werden");
         return;
@@ -181,7 +181,7 @@ router.post('/favourite/:action', async (req, res) => {
         _sendError(res, "Server nicht angegeben");
         return;
     }
-    const botGuild = req.bot.guilds.cache.get(req.body.guild)
+    const botGuild = await req.bot.guilds.fetch(req.body.guild)
     if (!botGuild) {
         _sendError(res, "Ungültiger Server angegeben");
         return;

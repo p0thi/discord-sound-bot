@@ -20,7 +20,7 @@ export default class AudioManager {
 
             if (msg.author.id === process.env.BOT_OWNER) {
                 if (args[1]) {
-                    const argsChannel = msg.guild.channels.cache.get(args[1]);
+                    const argsChannel = await msg.guild.channels.fetch(args[1]);
                     if (argsChannel && argsChannel.type === "voice") {
                         channel = argsChannel;
                     }
