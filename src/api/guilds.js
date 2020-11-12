@@ -95,7 +95,7 @@ router.get("/all", async (req, res) => {
                             guild.editable = req.userId === process.env.BOT_OWNER || botGuild.member(req.userId).hasPermission("ADMINISTRATOR")
                         } catch (error) {
                             log.error('ERROR:', error)
-                            log.error("user id:", req.user.id)
+                            log.error("user id:", req.userId)
                             log.error('in guild', botGuilds.get(guild.id).name)
                             log.error('bot guild', botGuild)
                         }
