@@ -2,6 +2,7 @@ import express from 'express'
 import fetch from 'node-fetch'
 import DatabaseManager from '../DatabaseManager'
 import AuthManager from './managers/AuthManager'
+import log from '../../log'
 
 const authManager = new AuthManager();
 const dbManager = new DatabaseManager('discord')
@@ -9,6 +10,7 @@ const dbManager = new DatabaseManager('discord')
 const router = express.Router()
 
 router.get('/self', async (req, res) => {
+    log.silly(req.userId)
     const botUser = req.bot.users.cache.get(req.userId);
     const dbUser = await dbManager.getUser({ discordId: req.userId})
     res.status(200).send({
