@@ -7,7 +7,9 @@ import DatabaseManager from './src/DatabaseManager'
 import Discord from 'discord.js';
 import log from './log'
 
-const soundBot = new Discord.Client();
+const soundBot = new Discord.Client({
+    fetchAllMembers: true
+});
 const dbManager = new DatabaseManager('discord');
 
 
