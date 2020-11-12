@@ -12,7 +12,7 @@ const router = express.Router()
 router.get("/all", async (req, res) => {
     dbManager.getUser({ discordId: req.userId }).then(user => {
         authManager.getDiscordToken(user).then(token => {
-            console.log(token)
+            // console.log(token)
             fetch('https://discord.com/api/users/@me/guilds', {
                 method: 'GET', headers: { Authorization: `Bearer ${token}` }
             }).then(response => {
@@ -84,12 +84,18 @@ router.get("/all", async (req, res) => {
                         },
                     ]).exec()
 
+                    console.log('intersecting guilds:', intersectingGuilds)
                     intersectingGuilds.forEach(guild => {
-                        let botGuild = botGuilds.get(guild.id)
-                        guild.icon = botGuild.iconURL()
-                        guild.name = botGuild.name
-                        guild.owner = botGuild.ownerID === req.userId
-                        guild.editable = req.userId === process.env.BOT_OWNER || botGuild.member(req.userId).hasPermission("ADMINISTRATOR")
+                        try {
+                            let botGuild = botGuilds.get(guild.id)
+                            guild.icon = botGuild.iconURL()
+                            guild.name = botGuild.name
+                            guild.owner = botGuild.ownerID === req.userId
+                            guild.editable = req.userId === process.env.BOT_OWNER || botGuild.member(req.userId).hasPermission("ADMINISTRATOR")
+                        } catch (error) {
+                            console.error('ERROR:', error)
+                            console.log('in guild', botGuilds.get(guild.id).name)
+                        }
                     })
 
                     res.status(200).send(intersectingGuilds);
