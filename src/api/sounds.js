@@ -294,7 +294,14 @@ router.get('/guildsounds/:id', async (req, res) => {
         return;
     }
     log.warn(JSON.stringify(botGuild.members['cache']));
-    if (!(await botGuild.members.fetch(req.userId)) && req.userId !== process.env.BOT_OWNER) {
+    let user;
+
+    try {
+        user = await botGuild.members.fetch(req.userId)
+    } catch (err) {
+        log.error("Member not found")
+    }
+    if (!user && req.userId !== process.env.BOT_OWNER) {
         _sendError(res, "Nutzer nicht auf dem Srever");
         return;
     }

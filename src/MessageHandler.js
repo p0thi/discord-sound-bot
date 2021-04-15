@@ -429,7 +429,13 @@ export default class MessageHandler {
 
                     let relevantGuilds = [];
                     for (let guild of intersectingGuilds) {
-                        let member = await guild.members.fetch(msg.author);
+                        let member;
+                        try {
+                            member = await guild.members.fetch(msg.author);
+                        } catch (err) {
+                            log.error("Member not found");
+                        }
+                        
                         if (member && member.hasPermission("ADMINISTRATOR")) {
                             relevantGuilds.push(guild);
                             continue;
@@ -491,7 +497,12 @@ export default class MessageHandler {
             {
                 title: "Befehl",
                 async message(conv) {
-                    let member = await conv.actionStack[0].result.members.fetch(msg.author);
+                    let member;
+                    try {
+                        member = await conv.actionStack[0].result.members.fetch(msg.author);
+                    } catch (err) {
+                        log.error("Member not found");
+                    }
                     let guild = await dbManager.getGuild({ discordId: conv.actionStack[0].result.id })
                     console.debug(`guild: ${guild}`)
 
@@ -519,11 +530,20 @@ export default class MessageHandler {
                     return embeds;
                 },
                 async acceptedAnswers(message, conv) {
-                    let member = await conv.actionStack[0].result.members.fetch(msg.author);
+                    let member;
+                    try {
+                        member = await conv.actionStack[0].result.members.fetch(msg.author);
+                    } catch (err) {
+                        log.error("Member not found");
+                    }
                     let dbGuild = await dbManager.getGuild({ discordId: conv.actionStack[0].result.id })
                     let sound = await dbManager.getSound({ guild: dbGuild, command: message.content.trim() })
 
                     if (!sound) {
+                        return false;
+                    }
+
+                    if (!member) {
                         return false;
                     }
 
@@ -701,9 +721,13 @@ export default class MessageHandler {
     static async getIntersectingGuildsOfAuthor(author) {
         let intersectingGuilds = [];
         for (let guild of author.client.guilds.cache.array()) {
-            let member = await guild.members.fetch(author)
-            if (member) {
-                intersectingGuilds.push(guild);
+            try {
+                let member = await guild.members.fetch(author)
+                if (member) {
+                    intersectingGuilds.push(guild);
+                }
+            } catch (err) {
+                log.error("Member not found")
             }
         }
         return intersectingGuilds;
