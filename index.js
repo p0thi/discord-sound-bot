@@ -18,7 +18,12 @@ log.info("starting for " + process.env.NODE_ENV);
 const soundBotToken = process.env.SOUND_BOT_TOKEN; // dev
 
 soundBot.on("ready", async () => {
-    soundBot.user.setActivity("bot.glowtrap.de", { type: "WATCHING", url: "https://bot.glowtrap.de" }).catch(e => console.error(e))
+    const statusSetter = () => {
+        soundBot.user.setActivity("bot.glowtrap.de", { type: "WATCHING", url: "https://bot.glowtrap.de" }).catch(e => console.error(e))
+    }
+
+    statusSetter();
+    setInterval(statusSetter, 1800000);
     
     for (const guild of soundBot.guilds.cache.array()) {
         await dbManager.getGuild({ discordId: guild.id })

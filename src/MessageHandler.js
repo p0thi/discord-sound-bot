@@ -548,6 +548,7 @@ export default class MessageHandler {
                 {
                     title: "Server",
                     async message(conv) {
+                        log.debug(msg.author)
 
                         let intersectingGuilds = await MessageHandler.getIntersectingGuildsOfAuthor(msg.author)
 

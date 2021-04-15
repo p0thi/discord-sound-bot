@@ -15,7 +15,7 @@
     "btoa": "^1.2.1",
     "bufferutil": "^4.0.1",
     "cors": "^2.8.5",
-    "discord.js": "^12.4.1",
+    "discord.js": "^12.5.3",
     "dotenv": "^8.2.0",
     "erlpack": "discordapp/erlpack",
     "esm": "^3.2.25",
