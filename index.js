@@ -1,35 +1,39 @@
 // https://discord.com/oauth2/authorize?client_id=234278013225795585&scope=bot&permissions=36830272
-require('dotenv').config()
-import MessageHandler from './src/MessageHandler';
-import JoinHandler from './src/JoinHandler';
-import expressServer from './src/api/express-server'
-import DatabaseManager from './src/DatabaseManager'
-import Discord from 'discord.js';
-import log from './log'
+require("dotenv").config();
+import MessageHandler from "./src/MessageHandler";
+import JoinHandler from "./src/JoinHandler";
+import expressServer from "./src/api/express-server";
+import DatabaseManager from "./src/DatabaseManager";
+import Discord from "discord.js";
+import log from "./log";
 
 const soundBot = new Discord.Client({
-    // fetchAllMembers: true
+  // fetchAllMembers: true
 });
-const dbManager = new DatabaseManager('discord');
-
+const dbManager = new DatabaseManager("discord");
 
 log.info("starting for " + process.env.NODE_ENV);
 
 const soundBotToken = process.env.SOUND_BOT_TOKEN; // dev
 
 soundBot.on("ready", async () => {
-    const statusSetter = () => {
-        soundBot.user.setActivity("bot.glowtrap.de", { type: "WATCHING", url: "https://bot.glowtrap.de" }).catch(e => console.error(e))
-    }
+  const statusSetter = () => {
+    soundBot.user
+      .setActivity("sounds.pothi.eu", {
+        type: "WATCHING",
+        url: "https://sounds.pothi.eu",
+      })
+      .catch((e) => console.error(e));
+  };
 
-    statusSetter();
-    setInterval(statusSetter, 1800000);
+  statusSetter();
+  setInterval(statusSetter, 1800000);
 
-    log.info("Fetching/creating guilds in database");
-    for (const guild of soundBot.guilds.cache.array()) {
-        await dbManager.getGuild({ discordId: guild.id })
-    }
-    log.info("Bot is ready");
+  log.info("Fetching/creating guilds in database");
+  for (const guild of soundBot.guilds.cache.array()) {
+    await dbManager.getGuild({ discordId: guild.id });
+  }
+  log.info("Bot is ready");
 });
 
 const messageHandler = new MessageHandler(soundBot);
