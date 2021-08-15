@@ -24,7 +24,7 @@ export default class JoinHandler {
                 if (!newState.channel.joinable) {
                     return;
                 }
-                
+
                 let guild = await dbManager.getGuild({ discordId: newState.guild.id });
                 let soundId = guild.joinSounds.get(newState.member.id)
 
@@ -39,7 +39,6 @@ export default class JoinHandler {
                 }
 
                 audioManager.play(sound, newState.channel);
-
             }
         }
     }

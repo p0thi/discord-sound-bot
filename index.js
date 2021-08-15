@@ -24,14 +24,15 @@ soundBot.on("ready", async () => {
 
     statusSetter();
     setInterval(statusSetter, 1800000);
-    
+
+    log.info("Fetching/creating guilds in database");
     for (const guild of soundBot.guilds.cache.array()) {
         await dbManager.getGuild({ discordId: guild.id })
     }
     log.info("Bot is ready");
 });
 
-const messageHandler = new MessageHandler(soundBot, "!");
+const messageHandler = new MessageHandler(soundBot);
 messageHandler.start();
 
 const joinHandler = new JoinHandler(soundBot);
