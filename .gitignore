@@ -3,3 +3,4 @@ data/
 sounds/
 .env
 *.log
+dist/

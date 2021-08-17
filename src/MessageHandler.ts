@@ -2,14 +2,25 @@ import DatabaseManager from "./DatabaseManager";
 import AudioManager from "./AudioManager";
 import MessageDeleter from "./MessageDeleter";
 import SoundManager from "./SoundManager";
-import { MessageEmbed, MessageAttachment } from "discord.js";
-import Conversation from "./Conversation";
+import {
+  MessageEmbed,
+  MessageAttachment,
+  Client,
+  Guild,
+  Message,
+  User,
+} from "discord.js";
+import Conversation, { Action, ActionResultType } from "./Conversation";
 import fs from "fs";
 import request from "http-async";
 import path from "path";
 import util from "util";
-import log from "../log";
-import Sound from "./models/Sound";
+import log from "./log";
+import Sound from "./db/models/Sound";
+import SoundModel from "./db/models/Sound";
+import IGuild from "./db/interfaces/IGuild";
+import ISound from "./db/interfaces/ISound";
+import { MongooseGridFSFileModel } from "mongoose-gridfs";
 
 const dbManager = new DatabaseManager("discord");
 const audioManager = new AudioManager();
@@ -18,11 +29,12 @@ const deleter = new MessageDeleter();
 const BASE_URL = process.env.BASE_URL;
 
 export default class MessageHandler {
-  constructor(bot) {
+  bot: Client;
+  constructor(bot: Client) {
     this.bot = bot;
   }
 
-  static async commandPrefix(guild) {
+  static async commandPrefix(guild: Guild) {
     let dbGuild = await dbManager.getGuild({ discordId: guild.id });
     return dbGuild.commandPrefix;
   }
@@ -33,32 +45,34 @@ export default class MessageHandler {
     });
   }
 
-  async handle(msg) {
+  async handle(msg: Message) {
     if (msg.author.bot) {
       return;
     }
     if (msg.guild !== null) {
       log.debug(`message detected: ${msg.content}`);
-      let prefix = await MessageHandler.commandPrefix(msg.guild);
+      const prefix = await MessageHandler.commandPrefix(msg.guild);
       if (!msg.content.startsWith(prefix)) {
         return;
       }
 
-      const inputMessageDeleter = deleter.add(msg);
+      deleter.add(msg);
 
       let args = msg.content.substr(prefix.length).split(" ");
       log.info(`commands detected: ${args[0]}`);
       switch (args[0]) {
         case "commands": {
-          let guild = await dbManager.getGuild({ discordId: msg.guild.id });
-          let sounds = await dbManager.getAllGuildSounds(guild);
+          let guild: IGuild = await dbManager.getGuild({
+            discordId: msg.guild.id,
+          });
+          let sounds: ISound[] = await dbManager.getAllGuildSounds(guild);
 
           let embeds = MessageHandler.createEmbeds(
             sounds,
-            (sound) => {
+            (sound: ISound) => {
               return [prefix + sound.command, sound.description];
             },
-            (embed, i) => {
+            (embed: MessageEmbed, i) => {
               embed.setTitle("-> Here is an overview <-");
               embed.setURL(
                 `${process.env.BASE_URL}/#/guilds?guild=${msg.guild.id}`
@@ -69,7 +83,7 @@ export default class MessageHandler {
             }
           );
 
-          embeds.forEach((embed) =>
+          embeds.forEach((embed: MessageEmbed) =>
             msg.reply(embed).then((m) => deleter.add(m, 120000))
           );
           break;
@@ -108,60 +122,60 @@ export default class MessageHandler {
         case "debug":
           log.debug(msg.client.guilds.cache[0]);
           break;
-        case "migrate": {
-          if (msg.author.id !== process.env.BOT_OWNER) {
-            return;
-          }
+        // case "migrate": {
+        //   if (msg.author.id !== process.env.BOT_OWNER) {
+        //     return;
+        //   }
 
-          let allSounds = await dbManager.getSounds({});
-          for (const sound of allSounds) {
-            if (!sound.filename) {
-              sound.filename = undefined;
-              sound.update();
-            }
-            continue;
+        //   let allSounds = await dbManager.getSounds({});
+        //   for (const sound of allSounds) {
+        //     if (!sound.filename) {
+        //       sound.filename = undefined;
+        //       sound.update();
+        //     }
+        //     continue;
 
-            if (sound.file || !sound.filename) {
-              log.warn(`sound "${sound.command}" not matching`);
-              continue;
-            }
+        //     if (sound.file || !sound.filename) {
+        //       log.warn(`sound "${sound.command}" not matching`);
+        //       continue;
+        //     }
 
-            let filename = sound.filename;
-            log.debug("filename created");
-            let filepath = `${path.dirname(
-              require.main.filename
-            )}/sounds/${filename}`;
-            log.debug("filepath created");
-            let readstream = fs.createReadStream(filepath);
-            log.debug("readstream created");
-            let file = await dbManager.storeFile(
-              { filename: sound.filename },
-              readstream
-            );
-            log.debug("db-file created");
-            if (!file) {
-              log.error(`Could not save File ${filename}`);
-              continue;
-            }
+        //     let filename = sound.filename;
+        //     log.debug("filename created");
+        //     let filepath = `${path.dirname(
+        //       require.main.filename
+        //     )}/sounds/${filename}`;
+        //     log.debug("filepath created");
+        //     let readstream = fs.createReadStream(filepath);
+        //     log.debug("readstream created");
+        //     let file = await dbManager.storeFile(
+        //       { filename: sound.filename },
+        //       readstream
+        //     );
+        //     log.debug("db-file created");
+        //     if (!file) {
+        //       log.error(`Could not save File ${filename}`);
+        //       continue;
+        //     }
 
-            sound.file = new dbManager.mongoose.Types.ObjectId(file._id);
-            log.debug("sound.file set");
-            // sound.filename = undefined;
-            // log.debug("sound.filename unset");
-            try {
-              await sound.save();
-            } catch (e) {
-              log.error("Can't save sound");
-              log.error(e);
-              file.unlink(() => {});
-              continue;
-            }
-            log.debug("sound saved");
-            fs.unlink(filepath, () => {});
-            log.debug("file deleted");
-          }
-          break;
-        }
+        //     sound.file = new dbManager.mongoose.Types.ObjectId(file._id);
+        //     log.debug("sound.file set");
+        //     // sound.filename = undefined;
+        //     // log.debug("sound.filename unset");
+        //     try {
+        //       await sound.save();
+        //     } catch (e) {
+        //       log.error("Can't save sound");
+        //       log.error(e);
+        //       file.unlink(() => {});
+        //       continue;
+        //     }
+        //     log.debug("sound saved");
+        //     fs.unlink(filepath, () => {});
+        //     log.debug("file deleted");
+        //   }
+        //   break;
+        // }
         case "help":
         case "hilfe": {
           let guild = await dbManager.getGuild({ discordId: msg.guild.id });
@@ -302,7 +316,7 @@ export default class MessageHandler {
         }
         case "joinsound":
         case "join":
-          let actionStack = [
+          let actionStack: Action<ActionResultType>[] = [
             {
               title: "Server",
               async message(conv) {
@@ -327,27 +341,26 @@ export default class MessageHandler {
 
                 return embeds;
               },
-              result: undefined,
               async acceptedAnswers(message, conv) {
                 let number = parseInt(message.content.trim());
                 if (isNaN(number)) {
-                  return false;
+                  return;
                 }
                 let intersectingGuilds =
                   await MessageHandler.getIntersectingGuildsOfAuthor(
                     msg.author
                   );
                 if (number > intersectingGuilds.length || number < 1) {
-                  return false;
+                  return;
                 }
                 return intersectingGuilds[number - 1];
               },
-            },
+            } as Action<Guild>,
             {
               title: "Befehl",
               async message(conv) {
                 let guild = await dbManager.getGuild({
-                  discordId: conv.actionStack[0].result.id,
+                  discordId: (conv.actionStack[0].result as Guild).id,
                 });
                 let _id = guild.joinSounds.get(conv.triggerMessage.author.id);
                 let currentCommand = await dbManager.getSound({ _id });
@@ -363,10 +376,9 @@ export default class MessageHandler {
                 log.debug(message);
                 return message;
               },
-              result: undefined,
               async acceptedAnswers(message, conv) {
                 let guild = await dbManager.getGuild({
-                  discordId: conv.actionStack[0].result.id,
+                  discordId: (conv.actionStack[0].result as Guild).id,
                 });
                 let sounds = await dbManager.getAllGuildSounds(guild);
 
@@ -377,7 +389,7 @@ export default class MessageHandler {
                 }
                 return false;
               },
-            },
+            } as Action<ISound>,
           ];
           let conversation = new Conversation(
             msg,
@@ -428,7 +440,7 @@ export default class MessageHandler {
     }
   }
 
-  startJoinSoundDeleteConv(msg) {
+  startJoinSoundDeleteConv(msg: Message) {
     let conv = new Conversation(
       msg,
       [
@@ -457,16 +469,16 @@ export default class MessageHandler {
           async acceptedAnswers(message, conv) {
             let number = parseInt(message.content.trim());
             if (isNaN(number)) {
-              return false;
+              return;
             }
             let intersectingGuilds =
               await MessageHandler.getIntersectingGuildsOfAuthor(msg.author);
             if (number > intersectingGuilds.length || number < 1) {
-              return false;
+              return;
             }
             return intersectingGuilds[number - 1];
           },
-        },
+        } as Action<Guild>,
       ],
       600000,
       async (conv) => {
@@ -508,9 +520,10 @@ export default class MessageHandler {
               let dbUser = await dbManager.getUser({
                 discordId: msg.author.id,
               });
-              let soundCount = await Sound.model
-                .count({ guild: dbGuild, creator: dbUser.id })
-                .exec();
+              let soundCount = await SoundModel.count({
+                guild: dbGuild,
+                creator: dbUser.id,
+              }).exec();
               if (soundCount > 0) {
                 relevantGuilds.push(guild);
               }
@@ -551,7 +564,7 @@ export default class MessageHandler {
 
             let relevantGuilds = [];
             for (let guild of intersectingGuilds) {
-              let member = await guild.member.fetch(msg.author);
+              let member = await guild.members.fetch(msg.author);
               if (member.hasPermission("ADMINISTRATOR")) {
                 relevantGuilds.push(guild);
                 continue;
@@ -560,9 +573,10 @@ export default class MessageHandler {
               let dbUser = await dbManager.getUser({
                 discordId: msg.author.id,
               });
-              let soundCount = await Sound.model
-                .count({ guild: dbGuild, creator: dbUser.id })
-                .exec();
+              let soundCount = await SoundModel.count({
+                guild: dbGuild,
+                creator: dbUser.id,
+              }).exec();
               if (soundCount > 0) {
                 relevantGuilds.push(guild);
               }
@@ -573,20 +587,20 @@ export default class MessageHandler {
             }
             return relevantGuilds[number - 1];
           },
-        },
+        } as Action<Guild>,
         {
           title: "Command",
           async message(conv) {
             let member;
             try {
-              member = await conv.actionStack[0].result.members.fetch(
-                msg.author
-              );
+              member = await (
+                conv.actionStack[0].result as Guild
+              ).members.fetch(msg.author);
             } catch (err) {
               log.error("Member not found");
             }
             let guild = await dbManager.getGuild({
-              discordId: conv.actionStack[0].result.id,
+              discordId: (conv.actionStack[0].result as Guild).id,
             });
             console.debug(`guild: ${guild}`);
 
@@ -614,9 +628,9 @@ export default class MessageHandler {
               },
               (embed, i) => {
                 embed.setDescription(
-                  '**The following audio commands can be deleted:**Command **without "' +
+                  'The following audio commands can be deleted: Please tell me the command **without "' +
                     guild.commandPrefix +
-                    '"** angeben'
+                    '"** '
                 );
                 embed.setColor("ORANGE");
               }
@@ -626,14 +640,14 @@ export default class MessageHandler {
           async acceptedAnswers(message, conv) {
             let member;
             try {
-              member = await conv.actionStack[0].result.members.fetch(
-                msg.author
-              );
+              member = await (
+                conv.actionStack[0].result as Guild
+              ).members.fetch(msg.author);
             } catch (err) {
               log.error("Member not found");
             }
             let dbGuild = await dbManager.getGuild({
-              discordId: conv.actionStack[0].result.id,
+              discordId: (conv.actionStack[0].result as Guild).id,
             });
             let sound = await dbManager.getSound({
               guild: dbGuild,
@@ -641,20 +655,20 @@ export default class MessageHandler {
             });
 
             if (!sound) {
-              return false;
+              return;
             }
 
             if (!member) {
-              return false;
+              return;
             }
 
             if (member.hasPermission("ADMINISTRATOR")) {
               return sound;
             }
             let dbUser = await dbManager.getUser({ discordId: member.id });
-            return dbUser._id.equals(sound.creator) ? sound : false;
+            return dbUser._id.equals(sound.creator) ? sound : undefined;
           },
-        },
+        } as Action<ISound>,
       ],
       600000,
       async (conv) => {
@@ -697,28 +711,28 @@ export default class MessageHandler {
           async acceptedAnswers(message, conv) {
             let number = parseInt(message.content.trim());
             if (isNaN(number)) {
-              return false;
+              return;
             }
             let intersectingGuilds =
               await MessageHandler.getIntersectingGuildsOfAuthor(msg.author);
             if (number > intersectingGuilds.length || number < 1) {
-              return false;
+              return;
             }
             return intersectingGuilds[number - 1];
           },
         },
         {
           title: "Command",
-          message(conv) {
-            let guild = dbManager.getGuild({
-              discordId: conv.actionStack[0].result.id,
+          async message(conv) {
+            let guild = await dbManager.getGuild({
+              discordId: (conv.actionStack[0].result as Guild).id,
             });
             return `Please enter the command you want to use to play the file later (without the "${guild.commandPrefix}" in the beginning)\n**(Between 3 and 15 Characters)**`;
           },
           async acceptedAnswers(message, conv) {
             let command = message.content.trim();
             let guild = await dbManager.getGuild({
-              discordId: conv.actionStack[0].result.id,
+              discordId: (conv.actionStack[0].result as Guild).id,
             });
             const isSoundIllegal = await SoundManager.isCommandIllegal(
               command,
@@ -726,54 +740,54 @@ export default class MessageHandler {
             );
             if (!!isSoundIllegal) {
               log.warn(isSoundIllegal);
-              return false;
+              return;
             }
             return command;
           },
         },
         {
           title: "Description",
-          message(conv) {
+          async message(conv) {
             return "Please enter a short description for the command\n**(Between 3 and 40 Characters)**";
           },
-          acceptedAnswers(message, conv) {
+          async acceptedAnswers(message, conv) {
             const descriptionIllegal = SoundManager.isDescriptionIllegal(
               message.content
             );
             if (!!descriptionIllegal) {
               log.warn(descriptionIllegal);
-              return false;
+              return;
             }
             return message.content;
           },
         },
         {
           title: "Audio File",
-          message(conv) {
+          async message(conv): Promise<string> {
             return "Please send me an audio file in **MP3** or **FLAC** format.\nThe file can not be larger than 1MB and not longer than 30 seconds.";
           },
           async acceptedAnswers(message, conv) {
             if (message.attachments.array().length === 0) {
               log.warn("no attachments");
-              return false;
+              return;
             }
             let att = message.attachments.first();
 
             const soundManager = new SoundManager();
             if (!soundManager.checkFileSize(att.size)) {
               log.warn("too big");
-              return false;
+              return;
             }
 
             if (!soundManager.checkFileExtension(att.name)) {
               log.warn(`wrong format`);
-              return false;
+              return;
             }
 
             let resp = await request("GET", att.url);
 
             if (!soundManager.checkFileMetadata(resp.content)) {
-              return false;
+              return;
             }
 
             const filename = soundManager.createUniqueFilename(att.name);
@@ -782,16 +796,16 @@ export default class MessageHandler {
 
             return {
               filename,
-              oldFilename: att.filename,
+              oldFilename: att.name,
               dbFile: file,
               soundManager: soundManager,
-            };
+            } as ISoundResultData;
           },
           revert(conv, action) {
             if (!action.result) {
               return;
             }
-            action.result.dbFile.unlink((err) => {
+            (action.result as ISoundResultData).dbFile.unlink((err) => {
               if (err) log.error(err);
             });
             // dbManager.unlinkFile(action.result.dbFile._id);
@@ -827,8 +841,12 @@ export default class MessageHandler {
     return conv;
   }
 
-  static createEmbeds(list, itemToTtleAndDescription, modifyEmbed) {
-    let embeds = [];
+  static createEmbeds<T>(
+    list: T[],
+    itemToTtleAndDescription: (item: T, index: number) => [string, string],
+    modifyEmbed: (embed: MessageEmbed, index: number) => void
+  ): MessageEmbed[] {
+    let embeds: MessageEmbed[] = [];
     embeds.push(new MessageEmbed());
 
     for (let i = 0; i < list.length; i++) {
@@ -859,8 +877,8 @@ export default class MessageHandler {
     return embeds;
   }
 
-  static async getIntersectingGuildsOfAuthor(author) {
-    let intersectingGuilds = [];
+  static async getIntersectingGuildsOfAuthor(author: User): Promise<Guild[]> {
+    let intersectingGuilds: Guild[] = [];
     for (let guild of author.client.guilds.cache.array()) {
       try {
         let member = await guild.members.fetch(author);
@@ -873,4 +891,11 @@ export default class MessageHandler {
     }
     return intersectingGuilds;
   }
+}
+
+export interface ISoundResultData {
+  filename: string;
+  oldFilename: string;
+  dbFile: MongooseGridFSFileModel;
+  soundManager: SoundManager;
 }

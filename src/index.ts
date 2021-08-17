@@ -1,9 +1,9 @@
 // https://discord.com/oauth2/authorize?client_id=234278013225795585&scope=bot&permissions=36830272
 require("dotenv").config();
-import MessageHandler from "./src/MessageHandler";
-import JoinHandler from "./src/JoinHandler";
-import expressServer from "./src/api/express-server";
-import DatabaseManager from "./src/DatabaseManager";
+import MessageHandler from "./MessageHandler";
+import JoinHandler from "./JoinHandler";
+import expressServer from "./api/express-server";
+import DatabaseManager from "./DatabaseManager";
 import Discord from "discord.js";
 import log from "./log";
 

@@ -2,6 +2,15 @@ import { v4 as uuidv4 } from "uuid";
 import { parseFile, parseBuffer, parseStream } from "music-metadata";
 import stream from "stream";
 import DatabaseManager from "./DatabaseManager";
+import {
+  MongoGridFSOptions,
+  MongooseGridFS,
+  MongooseGridFSFileModel,
+} from "mongoose-gridfs";
+import SoundModel from "./db/models/Sound";
+import IUser from "./db/interfaces/IUser";
+import IGuild from "./db/interfaces/IGuild";
+import ISound from "./db/interfaces/ISound";
 
 const dbManager = new DatabaseManager("discord");
 const prohibitedCommands = [
@@ -18,6 +27,13 @@ const prohibitedCommands = [
 ];
 
 export default class SoundManager {
+  maxSize: number;
+  maxLength: number;
+  fileTypes: string[];
+
+  filename: string;
+  oldFilename: string;
+  soundFile: MongooseGridFSFileModel;
   constructor({
     maxSize = 1000000,
     maxLength = 30,
@@ -28,20 +44,20 @@ export default class SoundManager {
     this.fileTypes = fileTypes;
   }
 
-  checkFileSize(size) {
+  checkFileSize(size: number) {
     return size <= this.maxSize;
   }
 
-  async checkFileMetadata(buffer) {
+  async checkFileMetadata(buffer: Buffer) {
     let metadata = await parseBuffer(buffer);
     return this.checkFileDuration(metadata.format.duration);
   }
 
-  checkFileDuration(duration) {
+  checkFileDuration(duration: number) {
     return duration <= this.maxLength;
   }
 
-  checkFileExtension(fullFileName) {
+  checkFileExtension(fullFileName: string) {
     let split = fullFileName.split(".");
     let ext = split[split.length - 1];
 
@@ -52,7 +68,7 @@ export default class SoundManager {
     return this.fileTypes.includes(ext.trim().toLowerCase());
   }
 
-  createUniqueFilename(fullOldName) {
+  createUniqueFilename(fullOldName: string) {
     let split = fullOldName.split(".");
     let ext = split[split.length - 1];
 
@@ -62,7 +78,7 @@ export default class SoundManager {
     return this.filename;
   }
 
-  async storeFile(buffer) {
+  async storeFile(buffer: Buffer) {
     if (!this.filename) {
       throw new Error("Set file name first");
     }
@@ -81,16 +97,21 @@ export default class SoundManager {
     }
   }
 
-  async createSound(command, description, guild, creator) {
+  async createSound(
+    command: string,
+    description: string,
+    guild: IGuild,
+    creator: IUser
+  ) {
     if (!this.soundFile) {
       throw new Error("Store file first");
     }
 
     try {
-      let sound = await dbManager.Sound.model.create({
-        file: this.soundFile,
+      const sound = await SoundModel.create({
         command,
         description,
+        file: this.soundFile,
         guild,
         creator,
       });
@@ -102,7 +123,7 @@ export default class SoundManager {
     }
   }
 
-  static async isCommandIllegal(command, guild) {
+  static async isCommandIllegal(command: string, guild: IGuild) {
     command = command.trim();
     if (!command || !guild) {
       throw new Error("Not all arguments provided");
@@ -116,9 +137,7 @@ export default class SoundManager {
       return "Command is too short, too long or contains invalid characters.";
     }
 
-    if (
-      (await dbManager.Sound.model.countDocuments({ guild, command })) !== 0
-    ) {
+    if ((await SoundModel.countDocuments({ guild, command }).exec()) !== 0) {
       return `Command ${command} already exists`;
     }
 
@@ -131,14 +150,14 @@ export default class SoundManager {
     return false;
   }
 
-  static isDescriptionIllegal(description) {
+  static isDescriptionIllegal(description: string) {
     if (/^.{3,60}$/.test(description.trim())) {
       return false;
     }
     return "Description is to short or too long.";
   }
 
-  static async deleteSound(sound) {
+  static async deleteSound(sound: ISound) {
     console.log("sound", sound.id);
     try {
       await dbManager.unlinkFile(sound.file);

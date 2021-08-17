@@ -1,18 +1,19 @@
-import express from "express";
+import { Router } from "express";
 import rateLimit from "express-rate-limit";
 import DatabaseManager from "../DatabaseManager";
 import AuthManager from "./managers/AuthManager";
 import AudioManager from "../AudioManager";
 import SoundManager from "../SoundManager";
-import fileUpload from "express-fileupload";
-import log from "../../log";
+import fileUpload, { UploadedFile } from "express-fileupload";
+import log from "../log";
 import { _sendError } from "./utils";
+import SoundModel from "../db/models/Sound";
 
 const authManager = new AuthManager();
 const dbManager = new DatabaseManager("discord");
 const audioManager = new AudioManager();
 
-const router = express.Router();
+const router = Router();
 
 const playRateLimit = rateLimit({
   windowMs: process.env.RATE_LIMIT_WINDOW,
@@ -21,7 +22,7 @@ const playRateLimit = rateLimit({
   message: {
     status: "error",
     message: `2 Commands every ${Math.ceil(
-      process.env.RATE_LIMIT_WINDOW / 1000
+      parseInt(process.env.RATE_LIMIT_WINDOW) / 1000
     )} seconds`,
   },
   keyGenerator(req) {
@@ -46,10 +47,12 @@ router.get("/play", playRateLimit, async (req, res) => {
   let sound;
   let dbGuild;
   if (req.query.id === "random" && req.query.guild) {
-    dbGuild = await dbManager.getGuild({ discordId: req.query.guild });
+    dbGuild = await dbManager.getGuild({
+      discordId: req.query.guild as string,
+    });
     sound = (await dbManager.getRandomSoundForGuild(dbGuild._id))[0];
   } else {
-    sound = await dbManager.getSoundById(req.query.id);
+    sound = await dbManager.getSoundById(req.query.id as string);
     try {
       dbGuild = await dbManager.getGuild({ _id: sound.guild });
     } catch (err) {
@@ -105,8 +108,7 @@ router.get("/play", playRateLimit, async (req, res) => {
 
 router.get("/listen/:id", async (req, res) => {
   console.log(req.params.id);
-  const sound = await dbManager.Sound.model
-    .findOne({ _id: req.params.id })
+  const sound = await SoundModel.findOne({ _id: req.params.id })
     .populate("guild")
     .exec();
   if (!sound) {
@@ -133,7 +135,7 @@ router.get("/listen/:id", async (req, res) => {
     }
   }
 
-  const file = await dbManager.getFile(sound.file);
+  const file = await dbManager.getFile(sound.file.id);
   if (!file) {
     _sendError(res, "File not found", 500);
     return;
@@ -173,23 +175,23 @@ router.post("/upload", fileUpload(), async (req, res) => {
     return;
   }
 
-  if (!soundManager.checkFileSize(file.size)) {
+  if (!soundManager.checkFileSize((file as UploadedFile).size)) {
     _sendError(res, "File too big");
     return;
   }
 
-  if (!soundManager.checkFileExtension(file.name)) {
+  if (!soundManager.checkFileExtension((file as UploadedFile).name)) {
     _sendError(res, "Wrong file format");
     return;
   }
 
-  if (!soundManager.checkFileMetadata(file.data)) {
+  if (!soundManager.checkFileMetadata((file as UploadedFile).data)) {
     _sendError(res, "Audio too long ( >30 sec)");
     return;
   }
 
   try {
-    await soundManager.storeFile(file.data);
+    await soundManager.storeFile((file as UploadedFile).data);
   } catch (e) {
     _sendError(res, e.message, 500);
     return;
@@ -215,8 +217,7 @@ router.post("/upload", fileUpload(), async (req, res) => {
 });
 
 router.delete("/delete", async (req, res) => {
-  const sound = await dbManager.Sound.model
-    .findOne({ _id: req.body.sound })
+  const sound = await SoundModel.findOne({ _id: req.body.sound })
     .populate("creator")
     .populate("guild")
     .exec();
@@ -246,7 +247,7 @@ router.delete("/delete", async (req, res) => {
 
   if (
     sound.creator.discordId !== req.userId &&
-    req.uderId !== botGuild.ownerID
+    req.userId !== botGuild.ownerID
   ) {
     _sendError(res, "Insufficient permissions", 403);
     return;
@@ -280,8 +281,7 @@ router.post("/joinsound", async (req, res) => {
     guild = await dbManager.getGuild({ discordId: req.body.guild });
     guild.joinSounds.delete(req.userId);
   } else {
-    const sound = await dbManager.Sound.model
-      .findOne({ _id: req.body.sound })
+    const sound = await SoundModel.findOne({ _id: req.body.sound })
       .populate("guild")
       .exec();
     console.log("sound", sound);
@@ -326,11 +326,10 @@ router.get("/guildsounds/:id", async (req, res) => {
     return;
   }
 
-  let sounds = await dbManager.Sound.model
-    .find({ guild: dbGuild })
+  let sounds = await SoundModel.find({ guild: dbGuild })
     .populate("creator")
     .exec();
-  sounds = sounds.map((sound) => {
+  const result = sounds.map((sound) => {
     return {
       id: sound._id,
       guild: req.params.id,
@@ -341,7 +340,7 @@ router.get("/guildsounds/:id", async (req, res) => {
     };
   });
 
-  res.status(200).send(sounds);
+  res.status(200).send(result);
 });
 
 router.post("/favourite/:action", async (req, res) => {
@@ -349,8 +348,7 @@ router.post("/favourite/:action", async (req, res) => {
     _sendError(res, "Sound not provided");
     return;
   }
-  const sound = await dbManager.Sound.model
-    .findOne({ _id: req.body.sound })
+  const sound = await SoundModel.findOne({ _id: req.body.sound })
     .populate("guild")
     .exec();
   if (!sound) {
@@ -358,9 +356,9 @@ router.post("/favourite/:action", async (req, res) => {
     return;
   }
 
-  const botMember = await req.bot.guilds
-    .fetch(sound.guild.discordId)
-    .member(req.userId);
+  const botMember = (await req.bot.guilds.fetch(sound.guild.discordId)).member(
+    req.userId
+  );
   if (!botMember && req.userId !== process.env.BOT_OWNER) {
     _sendError(res, "User has insufficient permissions");
     return;

@@ -4,10 +4,9 @@ import btoa from "btoa";
 import fetch from "node-fetch";
 import jwt from "jsonwebtoken";
 import moment from "moment";
-import { catchAsync } from "./utils";
 import DatabaseManager from "../DatabaseManager";
 import AuthManager from "./managers/AuthManager";
-import log from "../../log";
+import log from "../log";
 
 const dbManager = new DatabaseManager("discord");
 const authManager = new AuthManager();

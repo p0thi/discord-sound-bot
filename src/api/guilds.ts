@@ -3,7 +3,8 @@ import fetch from "node-fetch";
 import DatabaseManager from "../DatabaseManager";
 import AuthManager from "./managers/AuthManager";
 import { _sendError } from "./utils";
-import log from "../../log";
+import log from "../log";
+import GuildModel from "../db/models/Guild";
 
 const authManager = new AuthManager();
 const dbManager = new DatabaseManager("discord");
@@ -36,61 +37,59 @@ router.get("/all", async (req, res) => {
               let match = {
                 $match: { $expr: { $in: ["$discordId", userGuildIds] } },
               };
-              if (req.userId === process.env.BOT_OWNER) {
-                match = { $match: {} };
-              }
+              // if (req.userId === process.env.BOT_OWNER) {
+              //   match = { $match: { $expr: {} } };
+              // }
 
-              let intersectingGuilds = await dbManager.Guild.model
-                .aggregate([
-                  match,
-                  {
-                    $lookup: {
-                      from: "sounds",
-                      localField: "_id",
-                      foreignField: "guild",
-                      as: "sounds",
-                    },
+              let intersectingGuilds = await GuildModel.aggregate([
+                ...(req.userId === process.env.BOT_OWNER ? [] : [match]),
+                {
+                  $lookup: {
+                    from: "sounds",
+                    localField: "_id",
+                    foreignField: "guild",
+                    as: "sounds",
                   },
-                  {
-                    $project: {
-                      id: "$discordId",
-                      _id: false,
-                      commandPrefix: true,
-                      joinSound: {
-                        $arrayElemAt: [
-                          {
-                            $map: {
-                              input: {
-                                $filter: {
-                                  input: { $objectToArray: "$joinSounds" },
-                                  as: "sound",
-                                  cond: { $eq: ["$$sound.k", req.userId] },
-                                },
+                },
+                {
+                  $project: {
+                    id: "$discordId",
+                    _id: false,
+                    commandPrefix: true,
+                    joinSound: {
+                      $arrayElemAt: [
+                        {
+                          $map: {
+                            input: {
+                              $filter: {
+                                input: { $objectToArray: "$joinSounds" },
+                                as: "sound",
+                                cond: { $eq: ["$$sound.k", req.userId] },
                               },
-                              as: "sound",
-                              in: "$$sound.v",
                             },
+                            as: "sound",
+                            in: "$$sound.v",
                           },
-                          0,
-                        ],
-                      },
-                      sounds: {
-                        $size: "$sounds",
-                        // $map: {
-                        //     input: "$sounds",
-                        //     as: "sound",
-                        //     in: {
-                        //         id: "$$sound._id",
-                        //         command: "$$sound.command",
-                        //         description: "$$sound.description",
-                        //         creator: { $eq: ["$$sound.creator", user._id] }
-                        //     }
-                        // }
-                      },
+                        },
+                        0,
+                      ],
+                    },
+                    sounds: {
+                      $size: "$sounds",
+                      // $map: {
+                      //     input: "$sounds",
+                      //     as: "sound",
+                      //     in: {
+                      //         id: "$$sound._id",
+                      //         command: "$$sound.command",
+                      //         description: "$$sound.description",
+                      //         creator: { $eq: ["$$sound.creator", user._id] }
+                      //     }
+                      // }
                     },
                   },
-                ])
-                .exec();
+                },
+              ]).exec();
 
               intersectingGuilds.forEach((guild) => {
                 let botGuild = botGuilds.get(guild.id);
@@ -142,7 +141,7 @@ router.post("/settings/:id", async (req, res) => {
 
   const dbGuild = await dbManager.getGuild({ discordId: req.params.id });
 
-  let returnObject = {};
+  let returnObject: any = {};
 
   if (req.body.commandPrefix) {
     const validPrefixes = [

@@ -1,5 +1,9 @@
-import Discord from "discord.js";
-import log from "../log.js";
+import Discord, { Guild, Message, MessageEmbed } from "discord.js";
+import { MongooseGridFSFileModel } from "mongoose-gridfs";
+import IGuild from "./db/interfaces/IGuild.js";
+import ISound from "./db/interfaces/ISound.js";
+import log from "./log.js";
+import { ISoundResultData } from "./MessageHandler.js";
 
 const activeConversations = {};
 const confirmRegex = /^(ja|j|yes|y)$/i;
@@ -7,18 +11,27 @@ const denyRegex = /^(nein|n|no|cancel|abbrechen|abbruch)$/i;
 const abortRegex = /^(abbrechen|abbruch|exit|cancel)$/i;
 
 export default class Conversation {
+  lastInteraction: Date;
+  timeout: NodeJS.Timeout;
+  triggerMessage: Message;
+  actionStack: Action<ActionResultType>[];
+  successCallback: (result: any) => void;
+  errorCallback: (result: any) => void;
+  ttl: number;
+  confirmed: boolean;
+
   constructor(
-    triggerMessage,
-    actionStack,
-    ttl,
-    successCallback,
-    errorCallback
+    triggerMessage: Message,
+    actionStack: Action<ActionResultType>[],
+    ttl: number,
+    successCallback: (result: any) => void,
+    errorCallback: (result: any) => void
   ) {
     if (activeConversations[triggerMessage.author.id]) {
       errorCallback(this);
       return;
     }
-    if (!triggerMessage.channel.type === "dm") {
+    if (!(triggerMessage.channel.type === "dm")) {
       errorCallback(this);
       return;
     }
@@ -153,7 +166,7 @@ export default class Conversation {
     let finalEmbed = new Discord.MessageEmbed()
       .setTitle("Conclusion")
       .setDescription(
-        "Should the information below be saved?\nPossible answers: **Ja, Nein**"
+        "Should the information below be saved?\nPossible answers: **Yes, No**"
       )
       .addField("\u200b", "\u200b");
 
@@ -210,12 +223,30 @@ export default class Conversation {
       return "File";
     }
   }
+
+  static checkUserConversation(id) {
+    let conv = activeConversations[id];
+    if (!conv || !conv.checkDateValid()) {
+      return undefined;
+    }
+    return activeConversations[id];
+  }
 }
 
-Conversation.checkUserConversation = function (id) {
-  let conv = activeConversations[id];
-  if (!conv || !conv.checkDateValid()) {
-    return undefined;
-  }
-  return activeConversations[id];
-};
+export type ActionResultType =
+  | string
+  // | false
+  | Guild
+  | IGuild
+  | ISoundResultData
+  | ISound;
+
+export interface Action<R extends ActionResultType> {
+  title: string;
+  message(conv: Conversation): Promise<string | string[] | MessageEmbed[]>;
+
+  result?: R;
+  dbFile?: MongooseGridFSFileModel;
+  acceptedAnswers(message: Message, conv?: Conversation): Promise<R>;
+  revert?: (conv: Conversation, action: Action<R>) => void;
+}
