@@ -1,4 +1,10 @@
-import Discord, { Guild, Message, MessageEmbed } from "discord.js";
+import { MessageOptions } from "child_process";
+import Discord, {
+  Guild,
+  Message,
+  MessageEmbed,
+  MessagePayload,
+} from "discord.js";
 import { MongooseGridFSFileModel } from "mongoose-gridfs";
 import IGuild from "./db/interfaces/IGuild.js";
 import ISound from "./db/interfaces/ISound.js";
@@ -31,7 +37,7 @@ export default class Conversation {
       errorCallback(this);
       return;
     }
-    if (!(triggerMessage.channel.type === "dm")) {
+    if (!(triggerMessage.channel.type === "DM")) {
       errorCallback(this);
       return;
     }
@@ -173,7 +179,7 @@ export default class Conversation {
     for (var item of this.actionStack) {
       finalEmbed.addField(item.title, this.resultToString(item.result), true);
     }
-    this.triggerMessage.channel.send(finalEmbed);
+    this.triggerMessage.channel.send({ embeds: [finalEmbed] });
   }
 
   finish() {
@@ -243,7 +249,7 @@ export type ActionResultType =
 
 export interface Action<R extends ActionResultType> {
   title: string;
-  message(conv: Conversation): Promise<string | string[] | MessageEmbed[]>;
+  message(conv: Conversation): Promise<string | MessagePayload>;
 
   result?: R;
   dbFile?: MongooseGridFSFileModel;

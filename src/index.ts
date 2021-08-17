@@ -4,11 +4,18 @@ import MessageHandler from "./MessageHandler";
 import JoinHandler from "./JoinHandler";
 import expressServer from "./api/express-server";
 import DatabaseManager from "./DatabaseManager";
-import Discord from "discord.js";
+import Discord, { Intents } from "discord.js";
 import log from "./log";
 
 const soundBot = new Discord.Client({
-  // fetchAllMembers: true
+  intents: [
+    Intents.FLAGS.GUILDS,
+    Intents.FLAGS.GUILD_MESSAGES,
+    Intents.FLAGS.GUILD_INTEGRATIONS,
+    Intents.FLAGS.DIRECT_MESSAGES,
+    Intents.FLAGS.GUILD_VOICE_STATES,
+  ],
+  partials: ["CHANNEL", "GUILD_MEMBER"],
 });
 const dbManager = new DatabaseManager("discord");
 
@@ -18,20 +25,18 @@ const soundBotToken = process.env.SOUND_BOT_TOKEN; // dev
 
 soundBot.on("ready", async () => {
   const statusSetter = () => {
-    soundBot.user
-      .setActivity("sounds.pothi.eu", {
-        type: "WATCHING",
-        url: "https://sounds.pothi.eu",
-      })
-      .catch((e) => console.error(e));
+    soundBot.user.setActivity("sounds.pothi.eu", {
+      type: "WATCHING",
+      url: "https://sounds.pothi.eu",
+    });
   };
 
   statusSetter();
   setInterval(statusSetter, 1800000);
 
   log.info("Fetching/creating guilds in database");
-  for (const guild of soundBot.guilds.cache.array()) {
-    await dbManager.getGuild({ discordId: guild.id });
+  for (const guild of soundBot.guilds.cache) {
+    await dbManager.getGuild({ discordId: guild[0] });
   }
   log.info("Bot is ready");
 });

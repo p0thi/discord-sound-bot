@@ -9,6 +9,7 @@ import {
   Guild,
   Message,
   User,
+  MessagePayload,
 } from "discord.js";
 import Conversation, { Action, ActionResultType } from "./Conversation";
 import fs from "fs";
@@ -84,7 +85,7 @@ export default class MessageHandler {
           );
 
           embeds.forEach((embed: MessageEmbed) =>
-            msg.reply(embed).then((m) => deleter.add(m, 120000))
+            msg.reply({ embeds: [embed] }).then((m) => deleter.add(m, 120000))
           );
           break;
         }
@@ -116,7 +117,10 @@ export default class MessageHandler {
           console.log(file);
           let attachment = new MessageAttachment(stream, file.filename);
           msg
-            .reply(`Here is your file :smirk:`, attachment)
+            .reply({
+              content: `Here is your file :smirk:`,
+              files: [attachment],
+            })
             .then((m) => deleter.add(m, 60000));
         }
         case "debug":
@@ -219,7 +223,7 @@ export default class MessageHandler {
             'If you send me ad DM with "help", I will tell you, what you can do there.'
           );
 
-          msg.reply(embed).then((m) => deleter.add(m));
+          msg.reply({ embeds: [embed] }).then((m) => deleter.add(m));
 
           break;
         }
@@ -241,7 +245,7 @@ export default class MessageHandler {
           });
           audioManager.playSound(sound, msg, args);
       }
-    } else if (msg.channel.type === "dm") {
+    } else if (msg.channel.type === "DM") {
       let activeConversation = Conversation.checkUserConversation(
         msg.author.id
       );
@@ -293,7 +297,7 @@ export default class MessageHandler {
           //help
           embed.addField(`help`, `Self-explanatory :smirk:`);
 
-          msg.reply(embed);
+          msg.reply({ embeds: [embed] });
           break;
         }
         case "ul":
@@ -339,7 +343,7 @@ export default class MessageHandler {
                   }
                 );
 
-                return embeds;
+                return { options: { embeds: embeds } } as MessagePayload;
               },
               async acceptedAnswers(message, conv) {
                 let number = parseInt(message.content.trim());
@@ -464,7 +468,7 @@ export default class MessageHandler {
               }
             );
 
-            return embeds;
+            return { options: { embeds: embeds } } as MessagePayload;
           },
           async acceptedAnswers(message, conv) {
             let number = parseInt(message.content.trim());
@@ -551,7 +555,7 @@ export default class MessageHandler {
               }
             );
 
-            return embeds;
+            return { options: { embeds: embeds } } as MessagePayload;
           },
           async acceptedAnswers(message, conv) {
             let number = parseInt(message.content.trim());
@@ -565,7 +569,7 @@ export default class MessageHandler {
             let relevantGuilds = [];
             for (let guild of intersectingGuilds) {
               let member = await guild.members.fetch(msg.author);
-              if (member.hasPermission("ADMINISTRATOR")) {
+              if (member.permissions.has("ADMINISTRATOR")) {
                 relevantGuilds.push(guild);
                 continue;
               }
@@ -635,7 +639,7 @@ export default class MessageHandler {
                 embed.setColor("ORANGE");
               }
             );
-            return embeds;
+            return { options: { embeds: embeds } } as MessagePayload;
           },
           async acceptedAnswers(message, conv) {
             let member;
@@ -706,7 +710,7 @@ export default class MessageHandler {
               }
             );
 
-            return embeds;
+            return { options: { embeds: embeds } } as MessagePayload;
           },
           async acceptedAnswers(message, conv) {
             let number = parseInt(message.content.trim());
@@ -767,7 +771,7 @@ export default class MessageHandler {
             return "Please send me an audio file in **MP3** or **FLAC** format.\nThe file can not be larger than 1MB and not longer than 30 seconds.";
           },
           async acceptedAnswers(message, conv) {
-            if (message.attachments.array().length === 0) {
+            if (message.attachments.size === 0) {
               log.warn("no attachments");
               return;
             }
@@ -879,7 +883,7 @@ export default class MessageHandler {
 
   static async getIntersectingGuildsOfAuthor(author: User): Promise<Guild[]> {
     let intersectingGuilds: Guild[] = [];
-    for (let guild of author.client.guilds.cache.array()) {
+    for (let [guildId, guild] of author.client.guilds.cache) {
       try {
         let member = await guild.members.fetch(author);
         if (member) {

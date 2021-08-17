@@ -96,10 +96,12 @@ router.get("/all", async (req, res) => {
                 try {
                   guild.icon = botGuild.iconURL();
                   guild.name = botGuild.name;
-                  guild.owner = botGuild.ownerID === req.userId;
+                  guild.owner = botGuild.ownerId === req.userId;
                   guild.editable =
                     req.userId === process.env.BOT_OWNER ||
-                    botGuild.member(req.userId).hasPermission("ADMINISTRATOR");
+                    botGuild.members.cache
+                      .get(req.userId)
+                      .permissions.has("ADMINISTRATOR");
                 } catch (error) {
                   log.error("ERROR:", error);
                   log.error("user id:", req.userId);
@@ -129,10 +131,10 @@ router.post("/settings/:id", async (req, res) => {
     return;
   }
 
-  const botUser = botGuild.member(req.userId);
+  const botUser = botGuild.members.cache.get(req.userId);
   if (
     !botUser ||
-    (!botUser.hasPermission("ADMINISTRATOR") &&
+    (!botUser.permissions.has("ADMINISTRATOR") &&
       req.userId !== process.env.BOT_OWNER)
   ) {
     _sendError(res, "User has insufficient permissions");

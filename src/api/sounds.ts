@@ -8,6 +8,7 @@ import fileUpload, { UploadedFile } from "express-fileupload";
 import log from "../log";
 import { _sendError } from "./utils";
 import SoundModel from "../db/models/Sound";
+import { StageChannel } from "discord.js";
 
 const authManager = new AuthManager();
 const dbManager = new DatabaseManager("discord");
@@ -78,7 +79,7 @@ router.get("/play", playRateLimit, async (req, res) => {
     return;
   }
 
-  const guildMember = discordGuild.member(user);
+  const guildMember = discordGuild.members.cache.get(user.id);
   if (!guildMember) {
     _sendError(res, "User not found on this server");
     return;
@@ -91,7 +92,7 @@ router.get("/play", playRateLimit, async (req, res) => {
   }
 
   const channel = voiceState.channel;
-  if (!channel) {
+  if (!channel || channel instanceof StageChannel) {
     _sendError(res, "You have to be in a channel", 409);
     return;
   }
@@ -129,7 +130,7 @@ router.get("/listen/:id", async (req, res) => {
   }
 
   if (req.userId !== process.env.BOT_OWNER) {
-    if (!botGuild.member(req.userId)) {
+    if (!botGuild.members.cache.get(req.userId)) {
       _sendError(res, "Not allowed to play the sound");
       return;
     }
@@ -247,7 +248,7 @@ router.delete("/delete", async (req, res) => {
 
   if (
     sound.creator.discordId !== req.userId &&
-    req.userId !== botGuild.ownerID
+    req.userId !== botGuild.ownerId
   ) {
     _sendError(res, "Insufficient permissions", 403);
     return;
@@ -356,9 +357,9 @@ router.post("/favourite/:action", async (req, res) => {
     return;
   }
 
-  const botMember = (await req.bot.guilds.fetch(sound.guild.discordId)).member(
-    req.userId
-  );
+  const botMember = (
+    await req.bot.guilds.fetch(sound.guild.discordId)
+  ).members.cache.get(req.userId);
   if (!botMember && req.userId !== process.env.BOT_OWNER) {
     _sendError(res, "User has insufficient permissions");
     return;

@@ -1,7 +1,7 @@
 import DatabaseManager from "./DatabaseManager";
 import AudioManager from "./AudioManager";
 import log from "./log";
-import { Client, VoiceState } from "discord.js";
+import { Client, StageChannel, VoiceState } from "discord.js";
 
 const dbManager = new DatabaseManager("discord");
 const audioManager = new AudioManager();
@@ -38,6 +38,10 @@ export default class JoinHandler {
         let sound = await dbManager.getSoundById(soundId);
 
         if (!sound) {
+          return;
+        }
+
+        if (newState.channel instanceof StageChannel) {
           return;
         }
 
