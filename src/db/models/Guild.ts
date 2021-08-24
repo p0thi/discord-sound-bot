@@ -27,7 +27,7 @@ export const reverseGroupPermissions = new Map(
 
 const permissionGroupSchema = new Schema(
   {
-    name: { type: String, required: true, unique: true, sparse: true },
+    name: { type: String, required: true },
     maxSoundDuration: { type: Number, required: true, default: 0 },
     maxSoundsPerUser: { type: Number, required: true, default: 0 },
     discordRoles: [{ type: String }],

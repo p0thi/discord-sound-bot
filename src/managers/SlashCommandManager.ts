@@ -45,7 +45,7 @@ export default class SlashCommandManager extends ACommandManager {
 
   async getTemplates(): Promise<Map<Guild, SlashCommandTemplate[]>> {
     const res: Map<Guild, SlashCommandTemplate[]> = new Map();
-    await Promise.all(
+    await Promise.allSettled(
       this.bot.guilds.cache.map(async (guild) => {
         const guildSlashCommands =
           await SlashCommandCreator.getAllGuildSlashCommands(guild);

@@ -1,0 +1,46 @@
+version: "3.7"
+services:
+  bot:
+    image: ghcr.io/p0thi/discord-sound-bot:master
+    restart: always
+    env_file:
+      - bot.env
+    depends_on:
+      - mongo
+    networks:
+      - sound_bot
+    ports:
+      - 8001:50451
+  website:
+    image: ghcr.io/p0thi/discord-sound-bot-website:master
+    restart: always
+    depends_on:
+      - bot
+    networks:
+      - sound_bot
+    ports:
+      - 8002:80
+  mongoexpress:
+    image: mongo-express
+    restart: unless-stopped
+    ports:
+      - "8003:8081"
+    depends_on:
+      - mongo
+    env_file:
+      - mongoexpress.env
+    environment:
+      - ME_CONFIG_SITE_BASEURL=/mongo/
+  mongo:
+    image: mongo:4.0.17
+    restart: always
+    networks:
+      - sound_bot
+    volumes:
+      - sound_bot_mongodb:/data/db
+
+networks:
+  sound_bot:
+
+volumes:
+  sound_bot_mongodb:

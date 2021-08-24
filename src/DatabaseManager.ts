@@ -103,26 +103,26 @@ export default class DatabaseManager {
 
   async getGuild(cond: FilterQuery<IGuild>, content?: any): Promise<IGuild> {
     return new Promise<IGuild>(async (resolve, reject) => {
-      let guild = await Guild.findOne(cond).exec();
+      let guild = await Guild.findOne(cond).exec().catch();
       if (!guild) {
         guild =
-          (await Guild.create(content || cond).catch(async () => {
+          (await Guild.create(content || cond).catch(async (e) => {
             guild =
               (await Guild.findOne(cond).exec().catch(reject)) || undefined;
 
             if (!guild) {
-              reject();
+              return reject();
             } else {
-              resolve(guild);
+              return resolve(guild);
             }
           })) || undefined;
         if (guild) {
-          resolve(guild);
+          return resolve(guild);
         } else {
-          reject();
+          return reject();
         }
       } else {
-        resolve(guild);
+        return resolve(guild);
       }
     });
   }
@@ -162,27 +162,22 @@ export default class DatabaseManager {
       if (!user) {
         user =
           (await User.create(cond).catch(async () => {
-            user =
-              (await User.findOne(cond)
-                .exec()
-                .catch(() => {
-                  reject();
-                })) || undefined;
+            user = (await User.findOne(cond).exec().catch(reject)) || undefined;
 
             if (!user) {
-              reject();
+              return reject();
             } else {
-              resolve(user);
+              return resolve(user);
             }
           })) || undefined;
 
         if (user) {
-          resolve(user);
+          return resolve(user);
         } else {
-          reject();
+          return reject();
         }
       } else {
-        resolve(user);
+        return resolve(user);
       }
     });
   }

@@ -63,8 +63,11 @@ export default abstract class ACommandManager
 
   static async setGuildCommands(guild: Guild, ...managers: ACommandManager[]) {
     const templates: Map<Guild, Template[]> = new Map();
+    console.log(1);
     for (const manager of managers) {
-      const currentTemplates = await manager.getTemplates();
+      const currentTemplates = await manager.getTemplates().catch((e) => {
+        return new Map<Guild, Template[]>();
+      });
 
       for (const [guild, guildTemplates] of currentTemplates) {
         if (!templates.has(guild)) {
@@ -75,12 +78,23 @@ export default abstract class ACommandManager
     }
 
     const guildTemplates = templates.get(guild);
+
+    if (!guildTemplates) {
+      return;
+    }
+
     const customGuildCommands = guildTemplates.map((c) => c.create());
 
     const setCommands = await guild.commands
       .set(customGuildCommands)
       .catch(async (e) => {
-        const owner = await guild.members.fetch(guild.ownerId);
+        const owner = await guild.members
+          .fetch(guild.ownerId)
+          .catch((e) => console.log(e));
+        if (!owner) {
+          console.log("Owner not found");
+          return;
+        }
         log.error(
           `Could not set guild commands on ${guild.name} [${guild.id}]`
         );
@@ -114,7 +128,9 @@ export default abstract class ACommandManager
                 ),
             } as GuildApplicationCommandPermissionData)
         )
-      )) as GuildApplicationCommandPermissionData[],
+      ).catch((e) => {
+        return [];
+      })) as GuildApplicationCommandPermissionData[],
     });
   }
 

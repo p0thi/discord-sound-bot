@@ -16,7 +16,7 @@ export default class BotGuildManager {
   }
 
   static async setupGuild(bot: Client, guild: Guild): Promise<void> {
-    ACommandManager.setGuildCommands(
+    await ACommandManager.setGuildCommands(
       guild,
       SlashCommandManager.getInstance(bot),
       ContextMenuCommandManager.getInstance(bot)
@@ -29,7 +29,7 @@ export default class BotGuildManager {
 
     // making sure every guild is in the database
     this.bot.guilds.cache.forEach((guild) => {
-      BotGuildManager.setupGuild(this.bot, guild);
+      BotGuildManager.setupGuild(this.bot, guild).catch((e) => console.log(e));
     });
   }
 
