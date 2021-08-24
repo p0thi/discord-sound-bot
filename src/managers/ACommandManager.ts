@@ -50,11 +50,11 @@ export default abstract class ACommandManager
   }
 
   async onPermissionsChange(
-    command: IGuildSlashCommand | IGuildContextMenuCommand,
+    guild: Guild,
     permission: GroupPermission[]
   ): Promise<Collection<string, ApplicationCommandPermissions[]>> {
     const result = await ACommandManager.editGuildCommandsPermissions(
-      command.guild
+      guild
     ).catch();
     return result;
   }

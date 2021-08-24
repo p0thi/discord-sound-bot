@@ -62,10 +62,19 @@ router.post("/login", (req, res) => {
         let dbUser = await dbManager.getUser({ discordId: userData.id });
         await authManager.setUserCredentials(dbUser, json);
 
-        let token = jwt.sign({ id: userData.id }, "asdf", { expiresIn: "7d" });
+        let token = jwt.sign({ id: userData.id }, process.env.JWT_TOKEN, {
+          expiresIn: "7d",
+        });
         res.status(200).json({ token, user: userData });
       });
     });
+  });
+});
+
+router.get("/client_id", (req, res) => {
+  res.status(200).json({
+    client_id: process.env.CLIENT_ID,
+    redirect_url: `${process.env.BASE_URL}/api/auth/callback`,
   });
 });
 

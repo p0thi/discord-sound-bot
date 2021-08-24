@@ -142,7 +142,7 @@ router.get("/listen/:id", async (req, res) => {
     }
   }
 
-  const file = await dbManager.getFile(sound.file.id);
+  const file = await dbManager.getFile(sound.file);
   if (!file) {
     _sendError(res, "File not found", 500);
     return;
@@ -320,7 +320,6 @@ router.get("/guildsounds/:id", async (req, res) => {
     _sendError(res, "Server not found");
     return;
   }
-  log.warn(JSON.stringify(botGuild.members["cache"]));
   let user;
 
   try {
@@ -342,16 +341,18 @@ router.get("/guildsounds/:id", async (req, res) => {
   let sounds = await SoundModel.find({ guild: dbGuild })
     .populate("creator")
     .exec();
-  const result = sounds.map((sound) => {
-    return {
-      id: sound._id,
-      guild: req.params.id,
-      command: sound.command,
-      description: sound.description,
-      createdAt: sound.createdAt,
-      creator: sound.creator.discordId === req.userId,
-    };
-  });
+  const result = sounds
+    .filter((s) => !!s.creator)
+    .map((sound) => {
+      return {
+        id: sound.id,
+        guild: req.params.id,
+        command: sound.command,
+        description: sound.description,
+        createdAt: sound.createdAt,
+        creator: sound.creator.discordId === req.userId,
+      };
+    });
 
   res.status(200).send(result);
 });

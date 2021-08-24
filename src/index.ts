@@ -11,6 +11,12 @@ import SlashCommandManager from "./managers/SlashCommandManager";
 import BotGuildManager from "./managers/BotGuildManager";
 import ACommandManager from "./managers/ACommandManager";
 
+// process.on("unhandledRejection", (reason, p) => {
+//   console.log("Unhandled Rejection at: Promise", p, "reason:", reason);
+//   console.log((reason as any).stack);
+//   // application specific logging, throwing an error, or other logic here
+// });
+
 const soundBot = new Discord.Client({
   intents: [
     Intents.FLAGS.GUILDS,

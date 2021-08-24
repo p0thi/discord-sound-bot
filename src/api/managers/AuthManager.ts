@@ -13,7 +13,7 @@ export default class AuthManager {
   verifyToken(token) {
     let decode;
     try {
-      decode = jwt.verify(token, "asdf");
+      decode = jwt.verify(token, process.env.JWT_TOKEN);
     } catch (e) {
       return false;
     }
@@ -66,7 +66,7 @@ export default class AuthManager {
   async getUserByJWT(token) {
     let decoded;
     try {
-      decoded = jwt.verify(token, "asdf");
+      decoded = jwt.verify(token, process.env.JWT_TOKEN);
     } catch (e) {
       log.error(e);
       return null;

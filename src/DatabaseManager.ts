@@ -12,6 +12,7 @@ import {
 import IGuild from "./db/interfaces/IGuild";
 import IUser from "./db/interfaces/IUser";
 import ISound from "./db/interfaces/ISound";
+import IAudioFile from "./db/interfaces/IAudioFile";
 
 export default class DatabaseManager {
   private static _instances: DatabaseManager;
@@ -43,9 +44,9 @@ export default class DatabaseManager {
     });
   }
 
-  async getFile(_id: string): Promise<MongooseGridFSFileModel> {
+  async getFile(audioFile: IAudioFile): Promise<MongooseGridFSFileModel> {
     let file = await new Promise<MongooseGridFSFileModel>((resolve, reject) => {
-      this.AudioFile.findOne({ _id }, (err, content) => {
+      this.AudioFile.findById(audioFile, (err, content) => {
         if (err) {
           reject(err);
         }

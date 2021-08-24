@@ -58,7 +58,7 @@ export default class PrefixCommand
   async notifyPermissionObservers(permissions: GroupPermission[]) {
     await Promise.all(
       this._permissionObservers.map((observer) =>
-        observer.onPermissionsChange(this, permissions)
+        observer.onPermissionsChange(this.guild, permissions)
       )
     );
   }

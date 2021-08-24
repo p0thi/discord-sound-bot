@@ -73,7 +73,14 @@ export default class DatabaseGuildManager {
   }
 
   async canManageGroups(member: GuildMember): Promise<boolean> {
-    const dbUser = await dbManager.getUser({ discordId: member.id });
+    const dbUser = await dbManager
+      .getUser({ discordId: member.id })
+      .catch((e) => {
+        log.error(e);
+      });
+    if (!dbUser) {
+      return false;
+    }
     return (
       !this.isBanned(dbUser) &&
       (this.isAdminOrOwner(member) ||

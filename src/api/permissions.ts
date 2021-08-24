@@ -9,6 +9,8 @@ import { Mongoose, ObjectId } from "mongoose";
 import GuildModel, { reverseGroupPermissions } from "../db/models/Guild";
 import DatabaseGuildManager from "../DatabaseGuildManager";
 import logger from "../log";
+import SlashCommandManager from "../managers/SlashCommandManager";
+import ContextMenuCommandManager from "../managers/ContextMenuCommandManager";
 
 const authManager = new AuthManager();
 const dbManager = DatabaseManager.getInstance();
@@ -29,7 +31,7 @@ router.get("/group/all/:guildId", async (req, res) => {
     req.bot.guilds.fetch(req.params.guildId),
   ]);
 
-  const member = await guild.members.fetch(req.bot.user.id);
+  const member = await guild.members.fetch(req.userId);
 
   const dbGuildManager = new DatabaseGuildManager(dbGuild);
 
@@ -37,8 +39,7 @@ router.get("/group/all/:guildId", async (req, res) => {
     _sendError(res, "You do not have permission to manage groups");
     return;
   }
-
-  res.status(200).send({
+  return res.status(200).json({
     status: "success",
     data: dbGuild.permissionGroups,
   });
@@ -50,7 +51,7 @@ router.patch("/group/edit/:guild/:id", async (req, res) => {
     req.bot.guilds.fetch(req.params.guild),
   ]);
 
-  const member = await guild.members.fetch(req.bot.user.id);
+  const member = await guild.members.fetch(req.userId);
 
   const dbGuildManager = new DatabaseGuildManager(dbGuild);
 
@@ -75,6 +76,11 @@ router.patch("/group/edit/:guild/:id", async (req, res) => {
     _sendError(res, "Could not save group");
     return;
   }
+
+  SlashCommandManager.getInstance(req.bot).onPermissionsChange(
+    guild,
+    undefined
+  );
 
   res.status(200).send({
     status: "success",
@@ -113,6 +119,11 @@ router.post("/group/create", async (req, res) => {
     return;
   }
 
+  SlashCommandManager.getInstance(req.bot).onPermissionsChange(
+    guild,
+    undefined
+  );
+
   res.status(200).send({
     status: "success",
     message: "Permission group added to server",
@@ -150,6 +161,10 @@ router.delete("/group/delete/:guild/:id", async (req, res) => {
     _sendError(res, "Could not delete permission group");
     return;
   }
+  SlashCommandManager.getInstance(req.bot).onPermissionsChange(
+    guild,
+    undefined
+  );
 
   res.status(200).send({
     status: "success",
