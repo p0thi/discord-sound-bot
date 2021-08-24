@@ -4,10 +4,16 @@ import DatabaseManager from "../DatabaseManager";
 import AuthManager from "./managers/AuthManager";
 import { _sendError } from "./utils";
 import log from "../log";
-import GuildModel from "../db/models/Guild";
+import IGuild, {
+  GroupPermissionKey,
+  IPermissionGroup,
+} from "../db/interfaces/IGuild";
+import { Types } from "mongoose";
+import GuildModel, { groupPermissions } from "../db/models/Guild";
+import DatabaseGuildManager from "../DatabaseGuildManager";
 
 const authManager = new AuthManager();
-const dbManager = new DatabaseManager("discord");
+const dbManager = DatabaseManager.getInstance();
 
 const router = express.Router();
 
@@ -21,7 +27,6 @@ router.get("/all", async (req, res) => {
       })
         .then((response) => {
           if (response.status !== 200) {
-            console.log(response);
             res.status(response.status).send({
               status: "error",
               message: response.statusText,
@@ -31,84 +36,105 @@ router.get("/all", async (req, res) => {
           response
             .json()
             .then(async (json) => {
+              // await req.bot.guilds.fetch();
               let botGuilds = req.bot.guilds.cache;
               let userGuildIds = json.map((item) => item.id);
 
               let match = {
-                $match: { $expr: { $in: ["$discordId", userGuildIds] } },
+                $match: {
+                  $expr: {
+                    $and: [
+                      ...(req.userId === process.env.BOT_OWNER
+                        ? [{ $in: ["$discordId", userGuildIds] }]
+                        : []),
+                      { $in: ["$discordId", botGuilds.map((g) => g.id)] },
+                    ],
+                  },
+                },
               };
-              // if (req.userId === process.env.BOT_OWNER) {
-              //   match = { $match: { $expr: {} } };
-              // }
 
-              let intersectingGuilds = await GuildModel.aggregate([
-                ...(req.userId === process.env.BOT_OWNER ? [] : [match]),
-                {
-                  $lookup: {
-                    from: "sounds",
-                    localField: "_id",
-                    foreignField: "guild",
-                    as: "sounds",
+              let intersectingGuilds =
+                await GuildModel.aggregate<GuildResponse>([
+                  match,
+                  {
+                    $lookup: {
+                      from: "sounds",
+                      localField: "_id",
+                      foreignField: "guild",
+                      as: "sounds",
+                    },
                   },
-                },
-                {
-                  $project: {
-                    id: "$discordId",
-                    _id: false,
-                    commandPrefix: true,
-                    joinSound: {
-                      $arrayElemAt: [
-                        {
-                          $map: {
-                            input: {
-                              $filter: {
-                                input: { $objectToArray: "$joinSounds" },
-                                as: "sound",
-                                cond: { $eq: ["$$sound.k", req.userId] },
+                  {
+                    $project: {
+                      id: "$discordId",
+                      _id: false,
+                      commandPrefix: true,
+                      joinSound: {
+                        $arrayElemAt: [
+                          {
+                            $map: {
+                              input: {
+                                $filter: {
+                                  input: { $objectToArray: "$joinSounds" },
+                                  as: "sound",
+                                  cond: { $eq: ["$$sound.k", req.userId] },
+                                },
                               },
+                              as: "sound",
+                              in: "$$sound.v",
                             },
-                            as: "sound",
-                            in: "$$sound.v",
                           },
-                        },
-                        0,
-                      ],
-                    },
-                    sounds: {
-                      $size: "$sounds",
-                      // $map: {
-                      //     input: "$sounds",
-                      //     as: "sound",
-                      //     in: {
-                      //         id: "$$sound._id",
-                      //         command: "$$sound.command",
-                      //         description: "$$sound.description",
-                      //         creator: { $eq: ["$$sound.creator", user._id] }
-                      //     }
-                      // }
+                          0,
+                        ],
+                      },
+                      banned: {
+                        $in: [Types.ObjectId(user.id), "$bannedUsers"],
+                      },
+                      sounds: {
+                        $size: "$sounds",
+                      },
+                      maxSounds: true,
+                      maxSoundDuration: true,
                     },
                   },
-                },
-              ]).exec();
+                ]);
 
-              intersectingGuilds.forEach((guild) => {
-                let botGuild = botGuilds.get(guild.id);
-                try {
-                  guild.icon = botGuild.iconURL();
-                  guild.name = botGuild.name;
-                  guild.owner = botGuild.ownerId === req.userId;
-                  guild.editable =
-                    req.userId === process.env.BOT_OWNER ||
-                    botGuild.members.cache
-                      .get(req.userId)
-                      .permissions.has("ADMINISTRATOR");
-                } catch (error) {
-                  log.error("ERROR:", error);
-                  log.error("user id:", req.userId);
-                  log.error("in guild", botGuilds.get(guild.id).name);
-                  log.error("bot guild", botGuild);
-                }
-              });
+              await Promise.allSettled(
+                intersectingGuilds.map(async (guild) => {
+                  const botGuild = botGuilds.get(guild.id);
+                  if (!botGuild) {
+                    return;
+                  }
+                  const [dbGuild, member] = await Promise.all([
+                    dbManager.getGuild({ discordId: botGuild.id }),
+                    botGuild.members.fetch(req.userId),
+                  ]);
+
+                  const dbGuildManager = new DatabaseGuildManager(dbGuild);
+                  try {
+                    guild.icon = botGuild.iconURL();
+                    guild.name = botGuild.name;
+                    guild.owner = botGuild.ownerId === req.userId;
+
+                    guild.userPermissions = dbGuildManager
+                      .getMemberGroupPermissions(member)
+                      .map((p) => groupPermissions.get(p));
+
+                    guild.roles = botGuild.roles.cache
+                      .filter((r) => !r.managed)
+                      .map((r) => ({
+                        id: r.id,
+                        name: r.name,
+                        hexColor: r.hexColor,
+                      }));
+                  } catch (error) {
+                    log.error("ERROR:", error);
+                    log.error("user id:", req.userId);
+                    log.error("in guild", botGuilds.get(guild.id).name);
+                    log.error("bot guild", botGuild);
+                  }
+                })
+              );
 
               res.status(200).send(intersectingGuilds);
             })
@@ -242,3 +268,24 @@ router.post("/favourite/:action", async (req, res) => {
 });
 
 module.exports = router;
+
+type role = {
+  name: string;
+  id: string;
+  hexColor: string;
+};
+
+interface GuildResponse {
+  name: string;
+  icon: string;
+  owner: boolean;
+  commandPrefix: string;
+  userPermissions: GroupPermissionKey[];
+  id: string;
+  joinSound: Types.ObjectId;
+  banned: boolean;
+  sounds: number;
+  maxSounds: number;
+  maxSoundDuration: number;
+  roles: role[];
+}

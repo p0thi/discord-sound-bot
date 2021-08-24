@@ -14,9 +14,10 @@ import {
 
 import log from "./log";
 import ISound from "./db/interfaces/ISound";
-import { Message, VoiceChannel } from "discord.js";
+import { GuildMember, Message, StageChannel, VoiceChannel } from "discord.js";
+import DatabaseGuildManager from "./DatabaseGuildManager";
 
-const dbManager = new DatabaseManager("discord");
+const dbManager = DatabaseManager.getInstance();
 
 export default class AudioManager {
   private static _guildAudioPlayers = new Map<string, AudioPlayer>();
@@ -24,28 +25,36 @@ export default class AudioManager {
     string,
     (newState: VoiceConnectionState, oldState: VoiceConnectionState) => void
   >();
+  private static _playingResolves = new Map<
+    string,
+    (value: void | PromiseLike<void>) => void
+  >();
 
-  async playSound(sound: ISound, msg: Message, args: string[]) {
-    if (sound) {
-      let channel = msg.member.voice.channel;
-
-      if (msg.author.id === process.env.BOT_OWNER) {
-        if (args[1]) {
-          const argsChannel = await msg.guild.channels.resolve(args[1]);
-          if (argsChannel && argsChannel.type === "GUILD_VOICE") {
-            channel = argsChannel as VoiceChannel;
-          }
-        }
-      }
-
-      if (channel && channel instanceof VoiceChannel) {
-        this.play(sound, channel).catch((err) => console.error(err));
-      }
-    } else {
+  async memberPlaySound(
+    member: GuildMember,
+    sound: ISound,
+    channel: VoiceChannel | StageChannel
+  ) {
+    const dbGuild = await dbManager.getGuild({ discordId: member.guild.id });
+    const databaseGuildManager = new DatabaseGuildManager(dbGuild);
+    if (!(await databaseGuildManager.canPlaySounds(member))) {
+      log.info(`${member.displayName} cannot play sounds`);
+      return;
     }
+
+    if (
+      !channel ||
+      channel instanceof StageChannel ||
+      !channel.joinable ||
+      !channel.speakable
+    ) {
+      log.info(`Bot cannot join or speak in ${channel}`);
+      return;
+    }
+    await this.play(sound, channel);
   }
 
-  play(sound: ISound, channel: VoiceChannel) {
+  private async play(sound: ISound, channel: VoiceChannel): Promise<void> {
     return new Promise<void>(async (resolve, reject) => {
       if (!channel.joinable || !channel.speakable) {
         return;
@@ -86,10 +95,15 @@ export default class AudioManager {
       const resource = createAudioResource(readStream, { inlineVolume: true });
       resource.volume?.setVolume(0.5);
 
+      player.pause();
       player.play(resource);
       player.once(AudioPlayerStatus.Idle, () => {
+        resolve();
         AudioManager._guildAudioPlayers.delete(channel.guild.id);
         getVoiceConnection(channel.guild.id).disconnect();
+      });
+      player.once(AudioPlayerStatus.Paused, () => {
+        resolve();
       });
 
       const subscription = getVoiceConnection(channel.guild.id).subscribe(

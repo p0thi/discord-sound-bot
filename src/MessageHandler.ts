@@ -10,8 +10,13 @@ import {
   Message,
   User,
   MessagePayload,
+  VoiceChannel,
+  EmbedField,
+  MessageActionRow,
+  MessageSelectMenu,
+  GuildMember,
 } from "discord.js";
-import Conversation, { Action, ActionResultType } from "./Conversation";
+import Conversation, { Action, QuestionInteractionType } from "./Conversation";
 import fs from "fs";
 import request from "http-async";
 import path from "path";
@@ -22,10 +27,16 @@ import SoundModel from "./db/models/Sound";
 import IGuild from "./db/interfaces/IGuild";
 import ISound from "./db/interfaces/ISound";
 import { MongooseGridFSFileModel } from "mongoose-gridfs";
+import { MembershipStates } from "discord.js/typings/enums";
+import DatabaseGuildManager from "./DatabaseGuildManager";
+import { GroupPermission } from "./db/models/Guild";
+import MultiPageMessage, {
+  MultiPageMessageOfFieldsOptions,
+} from "./MultiPageMessage";
 
-const dbManager = new DatabaseManager("discord");
+const dbManager = DatabaseManager.getInstance();
 const audioManager = new AudioManager();
-const deleter = new MessageDeleter();
+const deleter = MessageDeleter.getInstance();
 
 const BASE_URL = process.env.BASE_URL;
 
@@ -41,7 +52,7 @@ export default class MessageHandler {
   }
 
   start() {
-    this.bot.on("message", (message) => {
+    this.bot.on("messageCreate", (message) => {
       this.handle(message);
     });
   }
@@ -63,177 +74,23 @@ export default class MessageHandler {
       log.info(`commands detected: ${args[0]}`);
       switch (args[0]) {
         case "commands": {
-          let guild: IGuild = await dbManager.getGuild({
+          let dbGuild: IGuild = await dbManager.getGuild({
             discordId: msg.guild.id,
           });
-          let sounds: ISound[] = await dbManager.getAllGuildSounds(guild);
+          let sounds: ISound[] = await dbManager.getAllGuildSounds(dbGuild);
 
-          let embeds = MessageHandler.createEmbeds(
-            sounds,
-            (sound: ISound) => {
-              return [prefix + sound.command, sound.description];
-            },
-            (embed: MessageEmbed, i) => {
-              embed.setTitle("-> Here is an overview <-");
-              embed.setURL(
-                `${process.env.BASE_URL}/#/guilds?guild=${msg.guild.id}`
-              );
-              embed.setDescription(`**Audio commands:**`);
-              embed.setFooter(prefix + "help for more information");
-              embed.setColor("ORANGE");
-            }
-          );
-
-          embeds.forEach((embed: MessageEmbed) =>
-            msg.reply({ embeds: [embed] }).then((m) => deleter.add(m, 120000))
-          );
-          break;
-        }
-        case "download":
-        case "dl": {
-          let guild = await dbManager.getGuild({ discordId: msg.guild.id });
-          if (!args[1] || args[1].startsWith(guild.commandPrefix)) {
-            msg
-              .reply(
-                `Please provide a command without **ohne "${guild.commandPrefix}"**`
-              )
-              .then((m) => deleter.add(m, 60000));
-            return;
-          }
-          let commandString = args[1].trim();
-          let sound = await dbManager.getSound({
-            guild,
-            command: commandString,
-          });
-          if (!sound) {
-            msg
-              .reply(`No sound with the command **${commandString}** found.`)
-              .then((m) => deleter.add(m, 60000));
-            return;
-          }
-
-          let stream = dbManager.getFileStream(sound.file._id);
-          let file = await dbManager.getFile(sound.file._id);
-          console.log(file);
-          let attachment = new MessageAttachment(stream, file.filename);
-          msg
-            .reply({
-              content: `Here is your file :smirk:`,
-              files: [attachment],
-            })
-            .then((m) => deleter.add(m, 60000));
-        }
-        case "debug":
-          log.debug(msg.client.guilds.cache[0]);
-          break;
-        // case "migrate": {
-        //   if (msg.author.id !== process.env.BOT_OWNER) {
-        //     return;
-        //   }
-
-        //   let allSounds = await dbManager.getSounds({});
-        //   for (const sound of allSounds) {
-        //     if (!sound.filename) {
-        //       sound.filename = undefined;
-        //       sound.update();
-        //     }
-        //     continue;
-
-        //     if (sound.file || !sound.filename) {
-        //       log.warn(`sound "${sound.command}" not matching`);
-        //       continue;
-        //     }
-
-        //     let filename = sound.filename;
-        //     log.debug("filename created");
-        //     let filepath = `${path.dirname(
-        //       require.main.filename
-        //     )}/sounds/${filename}`;
-        //     log.debug("filepath created");
-        //     let readstream = fs.createReadStream(filepath);
-        //     log.debug("readstream created");
-        //     let file = await dbManager.storeFile(
-        //       { filename: sound.filename },
-        //       readstream
-        //     );
-        //     log.debug("db-file created");
-        //     if (!file) {
-        //       log.error(`Could not save File ${filename}`);
-        //       continue;
-        //     }
-
-        //     sound.file = new dbManager.mongoose.Types.ObjectId(file._id);
-        //     log.debug("sound.file set");
-        //     // sound.filename = undefined;
-        //     // log.debug("sound.filename unset");
-        //     try {
-        //       await sound.save();
-        //     } catch (e) {
-        //       log.error("Can't save sound");
-        //       log.error(e);
-        //       file.unlink(() => {});
-        //       continue;
-        //     }
-        //     log.debug("sound saved");
-        //     fs.unlink(filepath, () => {});
-        //     log.debug("file deleted");
-        //   }
-        //   break;
-        // }
-        case "help":
-        case "hilfe": {
-          let guild = await dbManager.getGuild({ discordId: msg.guild.id });
-          let commandPrefix = guild.commandPrefix;
-          let embed = new MessageEmbed();
-          embed.setTitle("-> Click here for more information <-");
-          embed.setURL(process.env.BASE_URL);
-          embed.setDescription(
-            "**Here you can find all commands with a short description** :blush: "
-          );
-          embed.setColor("ORANGE");
-
-          // sound
-          embed.addField(
-            `${commandPrefix}<Sound>`,
-            `Makes me play the <Sound>. You can see all commands by sending ${commandPrefix}commands .`
-          );
-
-          // random
-          embed.addField(
-            `${commandPrefix}random`,
-            `Makes me play a random sound.`
-          );
-
-          // commands
-          embed.addField(
-            `${commandPrefix}commands`,
-            `Makes me show all sound commands, that are available on the server`
-          );
-
-          // download
-          embed.addField(
-            `${commandPrefix}download <Sound>`,
-            `Makes me send you the audiofile of <Sound>. <Sound> is a sound command wihtout the "${commandPrefix}"`
-          );
-
-          // help
-          embed.addField(`${commandPrefix}help`, `Wow.... :smirk:`);
-
-          embed.setFooter(
-            'If you send me ad DM with "help", I will tell you, what you can do there.'
-          );
-
-          msg.reply({ embeds: [embed] }).then((m) => deleter.add(m));
-
-          break;
+          SoundManager.sendCommandsList(msg.channel, msg.channel, dbGuild);
         }
         case "random": {
           deleter.add(msg, 2000);
           let guild = await dbManager.getGuild({ discordId: msg.guild.id });
           let sound = await dbManager.getRandomSoundForGuild(guild._id);
-          log.debug(sound[0]);
-          // let sound = await dbManager.getSound({ command: args[0], guild: guild });
-          audioManager.playSound(sound[0], msg, args);
+
+          audioManager.memberPlaySound(
+            msg.member,
+            sound[0],
+            msg.member.voice.channel as VoiceChannel
+          );
           break;
         }
         default:
@@ -243,14 +100,19 @@ export default class MessageHandler {
             command: args[0],
             guild: guild,
           });
-          audioManager.playSound(sound, msg, args);
+          audioManager.memberPlaySound(
+            msg.member,
+            sound,
+            msg.member.voice.channel as VoiceChannel
+          );
       }
     } else if (msg.channel.type === "DM") {
+      return;
       let activeConversation = Conversation.checkUserConversation(
         msg.author.id
       );
       if (activeConversation) {
-        activeConversation.trigger(msg);
+        activeConversation.start();
         return;
       }
 
@@ -260,579 +122,746 @@ export default class MessageHandler {
       }
 
       switch (args[0]) {
-        case "help":
-        case "hilfe": {
-          let embed = new MessageEmbed();
-          embed.setTitle("-> Click here for more information <-");
-          embed.setURL(process.env.BASE_URL);
-          embed.setDescription(
-            "**Here you can find all commands with a short description** :blush: "
-          );
-          embed.setColor("ORANGE");
-
-          // upload
-          embed.addField(
-            `upload`,
-            "Starts the process to create a new sound command for a server. Just follow the instructions"
-          );
-
-          // remove
-          embed.addField(
-            `remove`,
-            "Starts the process to delete a sound command from a server."
-          );
-
-          // joinsound
-          embed.addField(
-            `joinsound`,
-            "Starts the process to set your join-sound for a server"
-          );
-
-          //joinsounddelete
-          embed.addField(
-            `joinsounddelete`,
-            "Starts the process to disable your join-sound for a server"
-          );
-
-          //help
-          embed.addField(`help`, `Self-explanatory :smirk:`);
-
-          msg.reply({ embeds: [embed] });
-          break;
-        }
         case "ul":
-        case "upload": {
-          let conv = this.startSoundUploadConv(msg);
-          conv.sendNextCallToAction();
+        case "upload":
+          {
+            let conv = this.startSoundUploadConv(msg);
+            conv?.sendNextCallToAction();
+          }
           break;
-        }
         case "joindelete":
-        case "joinsounddelete": {
-          let conv = this.startJoinSoundDeleteConv(msg);
-          conv.sendNextCallToAction();
+        case "joinsounddelete":
+          {
+            let conv = this.startJoinSoundDeleteConv(msg);
+            conv?.sendNextCallToAction();
+          }
           break;
-        }
         case "remove":
-        case "delete": {
-          let conv = this.startSoundDeleteConv(msg);
-          conv.sendNextCallToAction();
+        case "delete":
+          {
+            let conv = this.startSoundDeleteConv(msg);
+            conv?.sendNextCallToAction();
+          }
           break;
-        }
         case "joinsound":
         case "join":
-          let actionStack: Action<ActionResultType>[] = [
-            {
-              title: "Server",
-              async message(conv) {
-                let intersectingGuilds =
-                  await MessageHandler.getIntersectingGuildsOfAuthor(
-                    msg.author
-                  );
-
-                let embeds = MessageHandler.createEmbeds(
-                  intersectingGuilds,
-                  (guild, i) => {
-                    return ["Nr. " + (i + 1), guild.name];
-                  },
-                  (embed, i) => {
-                    embed.setDescription(
-                      "**For which server do you want to change this setting?**\n(Please state the number)"
-                    );
-                    embed.addField("\u200b", "\u200b");
-                    embed.setColor("ORANGE");
-                  }
-                );
-
-                return { options: { embeds: embeds } } as MessagePayload;
-              },
-              async acceptedAnswers(message, conv) {
-                let number = parseInt(message.content.trim());
-                if (isNaN(number)) {
-                  return;
-                }
-                let intersectingGuilds =
-                  await MessageHandler.getIntersectingGuildsOfAuthor(
-                    msg.author
-                  );
-                if (number > intersectingGuilds.length || number < 1) {
-                  return;
-                }
-                return intersectingGuilds[number - 1];
-              },
-            } as Action<Guild>,
-            {
-              title: "Befehl",
-              async message(conv) {
-                let guild = await dbManager.getGuild({
-                  discordId: (conv.actionStack[0].result as Guild).id,
-                });
-                let _id = guild.joinSounds.get(conv.triggerMessage.author.id);
-                let currentCommand = await dbManager.getSound({ _id });
-                log.debug(currentCommand);
-
-                let message = "";
-                if (!!currentCommand) {
-                  message += `The current command for this server is **${guild.commandPrefix}${currentCommand.command}**\n`;
-                } else {
-                  message += "No command is currently set for this server\n";
-                }
-                message += `Write me the command **without "${guild.commandPrefix}"** at the beginning`;
-                log.debug(message);
-                return message;
-              },
-              async acceptedAnswers(message, conv) {
-                let guild = await dbManager.getGuild({
-                  discordId: (conv.actionStack[0].result as Guild).id,
-                });
-                let sounds = await dbManager.getAllGuildSounds(guild);
-
-                for (const sound of sounds) {
-                  if (sound.command === message.content.trim()) {
-                    return sound;
-                  }
-                }
-                return false;
-              },
-            } as Action<ISound>,
-          ];
-          let conversation = new Conversation(
-            msg,
-            actionStack,
-            600000 /* 10 min = 600000 */,
-            async (conv) => {
-              // let guild = Guild.model.findOne({discordId: conv.actionStack[1].id});
-              let guild = await dbManager.getGuild({
-                discordId: conv.actionStack[0].result.id,
-              });
-              guild.joinSounds.set(
-                conv.triggerMessage.author.id,
-                conv.actionStack[1].result
-              );
-              await guild.save();
-            },
-            () => log.warn("conversation error")
-          );
-          conversation.sendNextCallToAction();
+          {
+            const conv = this.startJoinSoundCreateConv(msg);
+            conv?.start();
+          }
           break;
         case "hilfe":
         case "help":
           msg.reply("Work in progress :)");
           break;
-        default:
+        case "perm":
+          {
+            let conv = this.startPermissionGroupCreateConv(msg);
+            conv?.start();
+          }
+          break;
+        case "permdel":
+          {
+            const conv = this.startPermissionGroupDeleteConv(msg);
+            conv?.start();
+          }
+          break;
+        default: {
+          if (!Conversation.activeConversations.has(msg.author.id)) {
+            let embed = new MessageEmbed();
+            embed.setTitle("-> Click here for more information <-");
+            embed.setURL(process.env.BASE_URL);
+            embed.setDescription(
+              "**Here you can find all commands with a short description** :blush: "
+            );
+            embed.setColor("ORANGE");
+
+            // upload
+            embed.addField(
+              `upload`,
+              "Starts the process to create a new sound command for a server. Just follow the instructions"
+            );
+
+            // remove
+            embed.addField(
+              `remove`,
+              "Starts the process to delete a sound command from a server."
+            );
+
+            // joinsound
+            embed.addField(
+              `joinsound`,
+              "Starts the process to set your join-sound for a server"
+            );
+
+            //joinsounddelete
+            embed.addField(
+              `joinsounddelete`,
+              "Starts the process to disable your join-sound for a server"
+            );
+
+            //perm
+            embed.addField(
+              `perm`,
+              "Starts the process to create a permission group for a server"
+            );
+
+            //permdel
+            embed.addField(
+              `permdel`,
+              "Starts the process to delete a permission group for a server"
+            );
+            msg.reply({ embeds: [embed] });
+          }
+        }
       }
 
       if (msg.attachments.size > 0) {
         let conversation = this.startSoundUploadConv(msg);
         let stackItem = conversation.actionStack[3];
-        let accepted = await stackItem.acceptedAnswers(msg, conversation);
-
-        if (!!accepted) {
-          stackItem.result = accepted;
-          conversation.acceptInput(accepted);
-        } else {
-          msg.reply("**No valid audio file**");
-          let messages = await stackItem.message(conversation);
-          if (Array.isArray(messages)) {
-            messages.forEach((message) => msg.reply(message));
-          } else {
-            msg.reply(messages);
-          }
-          conversation.abort();
-        }
+        const verifiedResult = stackItem.setResult(msg.attachments.first());
       }
       return;
     }
   }
 
-  startJoinSoundDeleteConv(msg: Message) {
-    let conv = new Conversation(
+  startJoinSoundCreateConv(msg: Message): Conversation {
+    const conv = Conversation.createConversation(
+      "Create Join Sound",
       msg,
-      [
-        {
-          title: "Server",
-          async message(conv) {
-            let intersectingGuilds =
-              await MessageHandler.getIntersectingGuildsOfAuthor(msg.author);
-
-            let embeds = MessageHandler.createEmbeds(
-              intersectingGuilds,
-              (guild, i) => {
-                return ["Nr. " + (i + 1), guild.name];
-              },
-              (embed, i) => {
-                embed.setDescription(
-                  "**Server list:**\nFor which server do you want to deactivate your join sound? **(Please state the number)**"
-                );
-                embed.addField("\u200b", "\u200b");
-                embed.setColor("ORANGE");
-              }
-            );
-
-            return { options: { embeds: embeds } } as MessagePayload;
-          },
-          async acceptedAnswers(message, conv) {
-            let number = parseInt(message.content.trim());
-            if (isNaN(number)) {
-              return;
-            }
-            let intersectingGuilds =
-              await MessageHandler.getIntersectingGuildsOfAuthor(msg.author);
-            if (number > intersectingGuilds.length || number < 1) {
-              return;
-            }
-            return intersectingGuilds[number - 1];
-          },
-        } as Action<Guild>,
-      ],
       600000,
       async (conv) => {
-        let guild = await dbManager.getGuild({
-          discordId: conv.actionStack[0].result.id,
+        const guild = conv.actionStack[0].options.result as Guild;
+        const dbGuild = await dbManager.getGuild({
+          discordId: guild.id,
         });
-        guild.joinSounds.delete(conv.triggerMessage.author.id);
-        await guild.save();
+        const dbGuildManager = new DatabaseGuildManager(dbGuild);
+        let member;
+        try {
+          member = guild.members.cache.get(msg.author.id);
+        } catch (err) {
+          log.error("Member not found");
+          msg.channel.send("I couldn't find you in the server");
+          conv.abort();
+          return;
+        }
+
+        if (!(await dbGuildManager.canUseJoinSound(member))) {
+          msg.channel.send(
+            "You are not allowed to use join sounds on this server"
+          );
+          conv.abort();
+          return;
+        }
+        dbGuild.joinSounds.set(
+          conv.triggerMessage.author.id,
+          (conv.actionStack[1].options.result as ISound).id
+        );
+        await dbGuild.save();
+      },
+      () => log.warn("conversation error")
+    );
+
+    conv.addActions([
+      MessageHandler.getServerAction(conv),
+      new Action<ISound>({
+        title: "Command",
+        conv,
+        interactionType: QuestionInteractionType.SELECT,
+        async message(conv) {
+          let dbGuild = await dbManager.getGuild({
+            discordId: (conv.actionStack[0].options.result as Guild).id,
+          });
+          let _id = dbGuild.joinSounds.get(conv.triggerMessage.author.id);
+          let currentCommand = await dbManager.getSound({ _id });
+          log.debug(currentCommand);
+
+          const relevantSounds = await dbManager.getAllGuildSounds(dbGuild);
+
+          const messagePayload =
+            MultiPageMessage.createMultipageMessageOfFields(
+              new MultiPageMessageOfFieldsOptions({
+                channel: msg.channel,
+                title: "Commands",
+                description:
+                  "The commands of the selected server.\n" +
+                  (!!currentCommand
+                    ? `Your current selected commands is **${dbGuild.commandPrefix}${currentCommand.command}**`
+                    : ""),
+                fields: relevantSounds.map((g, i) => ({
+                  name: `${dbGuild.commandPrefix}${g.command}`,
+                  value: g.description,
+                  inline: true,
+                })),
+                withSelectMenu: true,
+                fieldToUseForSelectValue: "name",
+              })
+            );
+
+          return messagePayload;
+        },
+        resultToString(conv, result) {
+          return result.command;
+        },
+        async idToResult(conv, id) {
+          return SoundModel.findOne({
+            command: id.substring(1),
+            guild: await dbManager.getGuild({
+              discordId: (conv.actionStack[0].options.result as Guild).id,
+            }),
+          }).exec();
+        },
+      }),
+    ]);
+    return conv;
+  }
+
+  startJoinSoundDeleteConv(msg: Message) {
+    const conv = Conversation.createConversation(
+      "Delete Join Sound",
+      msg,
+      600000,
+      async (conv) => {
+        let dbGuild = await dbManager.getGuild({
+          discordId: (conv.actionStack[0].options.result as Guild).id,
+        });
+        dbGuild.joinSounds.delete(conv.triggerMessage.author.id);
+        await dbGuild.save();
       },
       () => {}
     );
+    conv?.addActions([MessageHandler.getServerAction(conv)]);
     return conv;
   }
 
   startSoundDeleteConv(msg) {
-    let conv = new Conversation(
+    const conv = Conversation.createConversation(
+      "Delete Sound",
       msg,
-      [
-        {
-          title: "Server",
-          async message(conv) {
-            let intersectingGuilds =
-              await MessageHandler.getIntersectingGuildsOfAuthor(msg.author);
-
-            let relevantGuilds = [];
-            for (let guild of intersectingGuilds) {
-              let member;
-              try {
-                member = await guild.members.fetch(msg.author);
-              } catch (err) {
-                log.error("Member not found");
-              }
-
-              if (member && member.hasPermission("ADMINISTRATOR")) {
-                relevantGuilds.push(guild);
-                continue;
-              }
-              let dbGuild = await dbManager.getGuild({ discordId: guild.id });
-              let dbUser = await dbManager.getUser({
-                discordId: msg.author.id,
-              });
-              let soundCount = await SoundModel.count({
-                guild: dbGuild,
-                creator: dbUser.id,
-              }).exec();
-              if (soundCount > 0) {
-                relevantGuilds.push(guild);
-              }
-            }
-
-            if (relevantGuilds.length === 0) {
-              msg.reply(
-                "There are no servers on which you can delete commands"
-              );
-              conv.abort();
-              return;
-            }
-
-            let embeds = MessageHandler.createEmbeds(
-              relevantGuilds,
-              (guild, i) => {
-                return ["Nr. " + (i + 1), guild.name];
-              },
-              (embed, i) => {
-                embed.setDescription(
-                  "**Server list:**\nFrom which server should a command be deleted? **(Please state the number)**"
-                );
-                embed.addField("\u200b", "\u200b");
-                embed.setColor("ORANGE");
-              }
-            );
-
-            return { options: { embeds: embeds } } as MessagePayload;
-          },
-          async acceptedAnswers(message, conv) {
-            let number = parseInt(message.content.trim());
-            if (isNaN(number)) {
-              return false;
-            }
-
-            let intersectingGuilds =
-              await MessageHandler.getIntersectingGuildsOfAuthor(msg.author);
-
-            let relevantGuilds = [];
-            for (let guild of intersectingGuilds) {
-              let member = await guild.members.fetch(msg.author);
-              if (member.permissions.has("ADMINISTRATOR")) {
-                relevantGuilds.push(guild);
-                continue;
-              }
-              let dbGuild = await dbManager.getGuild({ discordId: guild.id });
-              let dbUser = await dbManager.getUser({
-                discordId: msg.author.id,
-              });
-              let soundCount = await SoundModel.count({
-                guild: dbGuild,
-                creator: dbUser.id,
-              }).exec();
-              if (soundCount > 0) {
-                relevantGuilds.push(guild);
-              }
-            }
-
-            if (number > relevantGuilds.length || number < 1) {
-              return false;
-            }
-            return relevantGuilds[number - 1];
-          },
-        } as Action<Guild>,
-        {
-          title: "Command",
-          async message(conv) {
-            let member;
-            try {
-              member = await (
-                conv.actionStack[0].result as Guild
-              ).members.fetch(msg.author);
-            } catch (err) {
-              log.error("Member not found");
-            }
-            let guild = await dbManager.getGuild({
-              discordId: (conv.actionStack[0].result as Guild).id,
-            });
-            console.debug(`guild: ${guild}`);
-
-            let relevantSounds = [];
-
-            if (member.hasPermission("ADMINISTRATOR")) {
-              relevantSounds = await dbManager.getAllGuildSounds(guild);
-            } else {
-              let dbUser = await dbManager.getUser({ discordId: member.id });
-              relevantSounds = await dbManager.getSounds({
-                guild,
-                creator: dbUser,
-              });
-            }
-
-            if (relevantSounds.length === 0) {
-              msg.reply("There are no commands to delete...");
-              conv.abort();
-              return;
-            }
-            let embeds = MessageHandler.createEmbeds(
-              relevantSounds,
-              (sound, i) => {
-                return [guild.commandPrefix + sound.command, sound.description];
-              },
-              (embed, i) => {
-                embed.setDescription(
-                  'The following audio commands can be deleted: Please tell me the command **without "' +
-                    guild.commandPrefix +
-                    '"** '
-                );
-                embed.setColor("ORANGE");
-              }
-            );
-            return { options: { embeds: embeds } } as MessagePayload;
-          },
-          async acceptedAnswers(message, conv) {
-            let member;
-            try {
-              member = await (
-                conv.actionStack[0].result as Guild
-              ).members.fetch(msg.author);
-            } catch (err) {
-              log.error("Member not found");
-            }
-            let dbGuild = await dbManager.getGuild({
-              discordId: (conv.actionStack[0].result as Guild).id,
-            });
-            let sound = await dbManager.getSound({
-              guild: dbGuild,
-              command: message.content.trim(),
-            });
-
-            if (!sound) {
-              return;
-            }
-
-            if (!member) {
-              return;
-            }
-
-            if (member.hasPermission("ADMINISTRATOR")) {
-              return sound;
-            }
-            let dbUser = await dbManager.getUser({ discordId: member.id });
-            return dbUser._id.equals(sound.creator) ? sound : undefined;
-          },
-        } as Action<ISound>,
-      ],
       600000,
       async (conv) => {
-        await dbManager.unlinkFile(conv.actionStack[1].result.file);
-        conv.actionStack[1].result.delete();
+        const sound = conv.actionStack[1].options.result as ISound;
+        await dbManager.unlinkFile(sound.file);
+        sound.delete();
       },
       () => {}
     );
+    conv?.addActions([
+      new Action<Guild>({
+        title: "Server",
+        conv,
+        interactionType: QuestionInteractionType.SELECT,
+        async message(conv) {
+          let intersectingGuilds =
+            await MessageHandler.getIntersectingGuildsOfAuthor(msg.author);
+
+          let relevantGuilds = [];
+          for (let guild of intersectingGuilds) {
+            let member: GuildMember;
+            try {
+              member = guild.members.cache.get(msg.author.id);
+            } catch (err) {
+              log.error("Member not found");
+              msg.channel.send("I couldn't find you in the server");
+              conv.abort();
+              return;
+            }
+
+            if (member && member.permissions.has("ADMINISTRATOR")) {
+              relevantGuilds.push(guild);
+              continue;
+            }
+            let dbGuild = await dbManager.getGuild({ discordId: guild.id });
+            let dbUser = await dbManager.getUser({
+              discordId: msg.author.id,
+            });
+            let soundCount = await SoundModel.count({
+              guild: dbGuild,
+              creator: dbUser.id,
+            }).exec();
+            if (soundCount > 0) {
+              relevantGuilds.push(guild);
+            }
+          }
+
+          if (relevantGuilds.length === 0) {
+            msg.reply("There are no servers on which you can delete commands");
+            conv.abort();
+            return;
+          }
+
+          const messagePayload =
+            MultiPageMessage.createMultipageMessageOfFields(
+              new MultiPageMessageOfFieldsOptions({
+                channel: msg.channel,
+                title: "Servers",
+                description: "The servers, that you and the bot are in",
+                fields: relevantGuilds.map((g, i) => ({
+                  name: g.name,
+                  value: g.id,
+                  inline: true,
+                })),
+              })
+            );
+
+          return messagePayload;
+        },
+        resultToString(conv, response) {
+          return response.name;
+        },
+        async idToResult(conv, id) {
+          return this.bot.guilds.cache.get(id);
+        },
+      }),
+      new Action<ISound>({
+        title: "Command",
+        conv,
+        interactionType: QuestionInteractionType.SELECT,
+        async message(conv) {
+          const guild = conv.actionStack[0].options.result as Guild;
+          let member;
+          try {
+            member = guild.members.cache.get(msg.author.id);
+          } catch (err) {
+            log.error("Member not found");
+            msg.channel.send("I couldn't find you in the server");
+            conv.abort();
+            return;
+          }
+          let dbGuild = await dbManager.getGuild({
+            discordId: guild.id,
+          });
+          console.debug(`guild: ${dbGuild}`);
+
+          let relevantSounds = [];
+
+          if (member.hasPermission("ADMINISTRATOR")) {
+            relevantSounds = await dbManager.getAllGuildSounds(dbGuild);
+          } else {
+            let dbUser = await dbManager.getUser({ discordId: member.id });
+            relevantSounds = await dbManager.getSounds({
+              guild: dbGuild,
+              creator: dbUser,
+            });
+          }
+
+          if (relevantSounds.length === 0) {
+            msg.reply("There are no commands to delete...");
+            conv.abort();
+            return;
+          }
+          const messagePayload =
+            MultiPageMessage.createMultipageMessageOfFields(
+              new MultiPageMessageOfFieldsOptions({
+                channel: msg.channel,
+                title: "Commands",
+                description: "Commands of the selected server",
+                fields: relevantSounds.map((g, i) => ({
+                  name: `${dbGuild.commandPrefix}${g.command}`,
+                  value: g.description,
+                  inline: true,
+                })),
+                withSelectMenu: true,
+                fieldToUseForSelectValue: "name",
+              })
+            );
+
+          return messagePayload;
+        },
+        resultToString(conv, response) {
+          return response.command;
+        },
+        async idToResult(conv, id) {
+          return SoundModel.findOne({
+            command: id.substring(1),
+            guild: await dbManager.getGuild({
+              discordId: (conv.actionStack[0].options.result as Guild).id,
+            }),
+          }).exec();
+        },
+      }),
+    ]);
+    return conv;
+  }
+
+  startPermissionGroupDeleteConv(msg: Message) {
+    const conv = Conversation.createConversation(
+      "Delete Permission Group",
+      msg,
+      600000,
+      async (conv) => {
+        const guild = conv.actionStack[0].options.result as Guild;
+        let member;
+        try {
+          member = guild.members.cache.get(msg.author.id);
+        } catch (err) {
+          log.error("Member not found");
+          msg.channel.send("I couldn't find you in the server");
+          conv.abort();
+          return;
+        }
+        const dbGuild = await dbManager.getGuild({
+          discordId: guild.id,
+        });
+
+        const dbGuildManager = new DatabaseGuildManager(dbGuild);
+
+        if (!(await dbGuildManager.canManageGroups(member))) {
+          msg.channel.send("You are not allowed to manage groups");
+          conv.abort();
+          return;
+        }
+
+        const permissionNames = (
+          conv.actionStack[1].options.result as string
+        ).split("#");
+
+        dbGuild.permissionGroups.remove(
+          dbGuild.permissionGroups
+            .filter((g) => permissionNames.includes(g.name))
+            .map((g) => g.id)
+        );
+
+        await dbGuild.save();
+      },
+      () => {}
+    );
+    conv?.addActions([
+      MessageHandler.getServerAction(conv),
+
+      new Action<string>({
+        title: "Permission Group",
+        conv,
+        interactionType: QuestionInteractionType.SELECT,
+        async message(conv) {
+          const guild = conv.actionStack[0].options.result as Guild;
+          const dbGuild = await dbManager.getGuild({ discordId: guild.id });
+
+          return MultiPageMessage.createMultipageMessageOfFields(
+            new MultiPageMessageOfFieldsOptions({
+              channel: conv.triggerMessage.channel,
+              title: "Permission groups",
+              description: `The permission groups of the server ${guild.name}`,
+              fields: dbGuild.permissionGroups.map(
+                (g, i) =>
+                  ({
+                    name: `Group ${i + 1}`,
+                    value: g.name,
+                    inline: true,
+                  } as EmbedField)
+              ),
+              fieldToUseForSelectValue: "value",
+              maxSelectValueOfOne: false,
+            })
+          );
+        },
+        resultToString(conv, result) {
+          return result.split("#").join(", ");
+        },
+      }),
+    ]);
+    return conv;
+  }
+
+  startPermissionGroupAddRoleConv(msg: Message) {
+    const conv = Conversation.createConversation(
+      "Add Role To Permission Group",
+      msg,
+      600000,
+      async (conv) => {
+        const guild = conv.actionStack[0].options.result as Guild;
+        let member;
+        try {
+          member = guild.members.cache.get(msg.author.id);
+        } catch (err) {
+          log.error("Member not found");
+          msg.channel.send("I couldn't find you in the server");
+          conv.abort();
+          return;
+        }
+        const dbGuild = await dbManager.getGuild({
+          discordId: guild.id,
+        });
+
+        const dbGuildManager = new DatabaseGuildManager(dbGuild);
+
+        if (!(await dbGuildManager.canManageGroups(member))) {
+          msg.channel.send("You are not allowed to manage groups");
+          conv.abort();
+          return;
+        }
+
+        const permissionNames = (
+          conv.actionStack[1].options.result as string
+        ).split("#");
+
+        dbGuild.permissionGroups.remove(
+          dbGuild.permissionGroups
+            .filter((g) => permissionNames.includes(g.name))
+            .map((g) => g.id)
+        );
+
+        await dbGuild.save();
+      },
+      () => {}
+    );
+    conv?.addActions([
+      MessageHandler.getServerAction(conv),
+
+      new Action<string>({
+        title: "Permission Group",
+        conv,
+        interactionType: QuestionInteractionType.SELECT,
+        async message(conv) {
+          const guild = conv.actionStack[0].options.result as Guild;
+          const dbGuild = await dbManager.getGuild({ discordId: guild.id });
+
+          return MultiPageMessage.createMultipageMessageOfFields(
+            new MultiPageMessageOfFieldsOptions({
+              channel: conv.triggerMessage.channel,
+              title: "Permission groups",
+              description: `The permission groups of the server ${guild.name}`,
+              fields: dbGuild.permissionGroups.map(
+                (g, i) =>
+                  ({
+                    name: `Group ${i + 1}`,
+                    value: g.name,
+                    inline: true,
+                  } as EmbedField)
+              ),
+              fieldToUseForSelectValue: "value",
+              maxSelectValueOfOne: false,
+            })
+          );
+        },
+        resultToString(conv, result) {
+          return result.split("#").join(", ");
+        },
+      }),
+    ]);
+    return conv;
+  }
+
+  startPermissionGroupCreateConv(msg: Message) {
+    const conv = Conversation.createConversation(
+      "Create Permission Group",
+      msg,
+      600000,
+      async (conv) => {
+        const guild = conv.actionStack[0].options.result as Guild;
+        let member;
+        try {
+          member = guild.members.cache.get(msg.author.id);
+        } catch (err) {
+          log.error("Member not found");
+          msg.channel.send("I couldn't find you in the server");
+          conv.abort();
+          return;
+        }
+        const dbGuild = await dbManager.getGuild({
+          discordId: guild.id,
+        });
+        const dbGuildManager = new DatabaseGuildManager(dbGuild);
+
+        if (!(await dbGuildManager.canManageGroups(member))) {
+          msg.channel.send("You are not allowed to manage groups");
+          conv.abort();
+          return;
+        }
+
+        dbGuild.permissionGroups.push({
+          name: conv.actionStack[1].options.result as string,
+          maxSoundDuration: parseInt(
+            conv.actionStack[2].options.result as string
+          ),
+          maxSoundsPerUser: parseInt(
+            conv.actionStack[3].options.result as string
+          ),
+          discordRoles: (conv.actionStack[4].options.result as string).split(
+            /[^0-9]+/
+          ),
+          permissions: (conv.actionStack[5].options.result as string).split(
+            "#"
+          ),
+        });
+        await dbGuild.save();
+      },
+      () => {}
+    );
+    conv?.addActions([
+      MessageHandler.getServerAction(conv),
+      new Action<string>({
+        title: "Name",
+        conv,
+        interactionType: QuestionInteractionType.MESSAGE,
+        async message(conv) {
+          return {
+            content: "Please write me the name of the new permission group",
+          };
+        },
+        resultToString(conv, result) {
+          return result;
+        },
+        async verifyResponse(conv, result) {
+          return true;
+        },
+      }),
+      new Action<string>({
+        title: "Max Sound Duration",
+        conv,
+        interactionType: QuestionInteractionType.MESSAGE,
+        async message(conv) {
+          return {
+            content: "Please write me the max duration of a sound in seconds",
+          };
+        },
+        resultToString(conv, result) {
+          return result;
+        },
+        async verifyResponse(conv, result) {
+          if (isNaN(parseInt(result, 10))) {
+            return "This input is not an integer";
+          }
+          return true;
+        },
+      }),
+      new Action<string>({
+        title: "Max Sounds Per User",
+        conv,
+        interactionType: QuestionInteractionType.MESSAGE,
+        async message(conv) {
+          return {
+            content: "Please write me the max amount of sounds per user",
+          };
+        },
+        resultToString(conv, result) {
+          return result;
+        },
+        async verifyResponse(conv, result) {
+          if (isNaN(parseInt(result, 10))) {
+            return "This input is not an integer";
+          }
+          return true;
+        },
+      }),
+      MessageHandler.getRoleAction(conv),
+
+      new Action<string>({
+        title: "Permissions",
+        conv,
+        interactionType: QuestionInteractionType.SELECT,
+        async message(conv) {
+          return {
+            embeds: [
+              {
+                title: "Permissions",
+                description:
+                  "Please select the permissions that should be given to the new permission group",
+                fields: Object.keys(GroupPermission).map((key) => ({
+                  name: key,
+                  value: GroupPermission[key],
+                })),
+              },
+            ],
+            components: [
+              new MessageActionRow().addComponents([
+                new MessageSelectMenu()
+                  .setCustomId("select-permissions")
+                  .setPlaceholder("Select permissions...")
+                  .setMaxValues(Object.keys(GroupPermission).length)
+                  .addOptions(
+                    Object.keys(GroupPermission).map((key) => ({
+                      label: key,
+                      value: key,
+                    }))
+                  ),
+              ]),
+            ],
+          };
+        },
+        resultToString(conv, result) {
+          return result.split("#").join("   ");
+        },
+      }),
+    ]);
     return conv;
   }
 
   startSoundUploadConv(msg) {
-    let conv = new Conversation(
+    const conv = Conversation.createConversation(
+      "Upload Sound",
       msg,
-      [
-        {
-          title: "Server",
-          async message(conv) {
-            log.debug(msg.author);
-
-            let intersectingGuilds =
-              await MessageHandler.getIntersectingGuildsOfAuthor(msg.author);
-
-            let embeds = MessageHandler.createEmbeds(
-              intersectingGuilds,
-              (guild, i) => {
-                return ["Nr. " + (i + 1), guild.name];
-              },
-              (embed, i) => {
-                embed.setDescription(
-                  "**Server list:**\nFor which of the following servers do you want to create the command? **(Please state the number)**"
-                );
-                embed.addField("\u200b", "\u200b");
-                embed.setColor("ORANGE");
-              }
-            );
-
-            return { options: { embeds: embeds } } as MessagePayload;
-          },
-          async acceptedAnswers(message, conv) {
-            let number = parseInt(message.content.trim());
-            if (isNaN(number)) {
-              return;
-            }
-            let intersectingGuilds =
-              await MessageHandler.getIntersectingGuildsOfAuthor(msg.author);
-            if (number > intersectingGuilds.length || number < 1) {
-              return;
-            }
-            return intersectingGuilds[number - 1];
-          },
-        },
-        {
-          title: "Command",
-          async message(conv) {
-            let guild = await dbManager.getGuild({
-              discordId: (conv.actionStack[0].result as Guild).id,
-            });
-            return `Please enter the command you want to use to play the file later (without the "${guild.commandPrefix}" in the beginning)\n**(Between 3 and 15 Characters)**`;
-          },
-          async acceptedAnswers(message, conv) {
-            let command = message.content.trim();
-            let guild = await dbManager.getGuild({
-              discordId: (conv.actionStack[0].result as Guild).id,
-            });
-            const isSoundIllegal = await SoundManager.isCommandIllegal(
-              command,
-              guild
-            );
-            if (!!isSoundIllegal) {
-              log.warn(isSoundIllegal);
-              return;
-            }
-            return command;
-          },
-        },
-        {
-          title: "Description",
-          async message(conv) {
-            return "Please enter a short description for the command\n**(Between 3 and 40 Characters)**";
-          },
-          async acceptedAnswers(message, conv) {
-            const descriptionIllegal = SoundManager.isDescriptionIllegal(
-              message.content
-            );
-            if (!!descriptionIllegal) {
-              log.warn(descriptionIllegal);
-              return;
-            }
-            return message.content;
-          },
-        },
-        {
-          title: "Audio File",
-          async message(conv): Promise<string> {
-            return "Please send me an audio file in **MP3** or **FLAC** format.\nThe file can not be larger than 1MB and not longer than 30 seconds.";
-          },
-          async acceptedAnswers(message, conv) {
-            if (message.attachments.size === 0) {
-              log.warn("no attachments");
-              return;
-            }
-            let att = message.attachments.first();
-
-            const soundManager = new SoundManager();
-            if (!soundManager.checkFileSize(att.size)) {
-              log.warn("too big");
-              return;
-            }
-
-            if (!soundManager.checkFileExtension(att.name)) {
-              log.warn(`wrong format`);
-              return;
-            }
-
-            let resp = await request("GET", att.url);
-
-            if (!soundManager.checkFileMetadata(resp.content)) {
-              return;
-            }
-
-            const filename = soundManager.createUniqueFilename(att.name);
-
-            const file = await soundManager.storeFile(resp.content);
-
-            return {
-              filename,
-              oldFilename: att.name,
-              dbFile: file,
-              soundManager: soundManager,
-            } as ISoundResultData;
-          },
-          revert(conv, action) {
-            if (!action.result) {
-              return;
-            }
-            (action.result as ISoundResultData).dbFile.unlink((err) => {
-              if (err) log.error(err);
-            });
-            // dbManager.unlinkFile(action.result.dbFile._id);
-            // fs.unlink(`${path.dirname(require.main.filename)}/sounds/${action.result.filename}`, (err) => { });
-          },
-        },
-      ],
       600000 /* 10 min = 600000 */,
       async (conv) => {
         // let guild = Guild.model.findOne({discordId: conv.actionStack[1].id});
-        const guild = await dbManager.getGuild({
-          discordId: conv.actionStack[0].result.id,
+        const guild = conv.actionStack[0].options.result as Guild;
+        let member;
+        try {
+          member = guild.members.cache.get(msg.author.id);
+        } catch (err) {
+          log.error("Member not found");
+          msg.channel.send("I couldn't find you in the server");
+          conv.abort();
+          return;
+        }
+        const dbGuild = await dbManager.getGuild({
+          discordId: guild.id,
         });
         const creator = await dbManager.getUser({
           discordId: conv.triggerMessage.author.id,
         });
-        const command = conv.actionStack[1].result;
-        const description = conv.actionStack[2].result;
+        const command = conv.actionStack[1].options.result as string;
+        const description = conv.actionStack[2].options.result as string;
 
-        const soundManager = conv.actionStack[3].result.soundManager;
+        const soundManager = new SoundManager(dbGuild);
+        const dbGuildManager = new DatabaseGuildManager(dbGuild);
+
+        if (!(await dbGuildManager.canAddSounds(member))) {
+          msg.channel.send("You are not allowed to add sounds");
+          conv.abort();
+          return;
+        }
+
+        const attachment = conv.actionStack[3].options
+          .result as MessageAttachment;
+
+        const resp = await request("GET", attachment.url);
+
+        const duration = await soundManager.getFileDuration(resp.content);
+
+        if (!duration) {
+          log.info(`Could not get medatada from file`);
+          msg.channel.send("Could not get metadata from the file");
+          conv.abort();
+          return;
+        }
+
+        const errorReason = await soundManager.checkFilePermissions(member, {
+          size: attachment.size,
+          duration: duration,
+          name: attachment.name,
+        });
+
+        if (errorReason) {
+          log.info(
+            `${member.displayName} could not save sound: ${errorReason}`
+          );
+          msg.channel.send(errorReason);
+          conv.abort();
+          return;
+        }
 
         try {
-          await soundManager.createSound(command, description, guild, creator);
+          const filename = soundManager.createUniqueFilename(attachment.name);
+
+          const file = await soundManager.storeFile(resp.content);
+
+          await soundManager.createSound(
+            command,
+            description,
+            dbGuild,
+            creator
+          );
         } catch (e) {
           log.error(e);
           soundManager.soundFile.unlink((err) => {
@@ -842,43 +871,111 @@ export default class MessageHandler {
       },
       () => log.warn("conversation error")
     );
+
+    conv?.addActions([
+      MessageHandler.getServerAction(conv),
+      new Action<string>({
+        title: "Command",
+        conv,
+        interactionType: QuestionInteractionType.MESSAGE,
+        async message(conv) {
+          let guild = await dbManager.getGuild({
+            discordId: (conv.actionStack[0].options.result as Guild).id,
+          });
+          return {
+            content: `Please enter the command you want to use to play the file later (without the "${guild.commandPrefix}" in the beginning)\n**(Between 3 and 15 Characters)**`,
+          };
+        },
+        resultToString(conv, result) {
+          return result;
+        },
+        async verifyResponse(conv, result) {
+          const dbGuild = await dbManager.getGuild({
+            discordId: (conv.actionStack[0].options.result as Guild).id,
+          });
+          const reason = await SoundManager.isCommandIllegal(
+            result as string,
+            dbGuild
+          );
+
+          return reason || true;
+        },
+      }),
+      new Action<string>({
+        title: "Description",
+        conv,
+        interactionType: QuestionInteractionType.MESSAGE,
+        async message(conv) {
+          return {
+            content:
+              "Please enter a short description for the command\n**(Between 3 and 40 Characters)**",
+          };
+        },
+        resultToString(conv, result) {
+          return result;
+        },
+        async verifyResponse(conv, result) {
+          const reason = await SoundManager.isDescriptionIllegal(
+            result as string
+          );
+
+          return reason || true;
+        },
+      }),
+      new Action<MessageAttachment>({
+        title: "Audio File",
+        conv,
+        interactionType: QuestionInteractionType.FILE,
+        async message(conv) {
+          const guild = conv.actionStack[0].options.result as Guild;
+          let member;
+          try {
+            member = guild.members.cache.get(msg.author.id);
+          } catch (err) {
+            log.error("Member not found");
+            msg.channel.send("I couldn't find you in the server");
+            conv.abort();
+            return;
+          }
+          const dbGuild = await dbManager.getGuild({ discordId: guild.id });
+          const dbGuildManager = new DatabaseGuildManager(dbGuild);
+          return {
+            content: `Please send me an audio file in **MP3** or **FLAC** format.\nThe file can not be larger than 1MB and not longer than ${dbGuildManager.getMaxSoundDurationForMember(
+              member
+            )} seconds.`,
+          };
+        },
+        resultToString(conv, result) {
+          return result.name;
+        },
+        async verifyResponse(conv, result) {
+          if (!conv.actionStack[0].options.result) {
+            return true;
+          }
+          const guild = conv.actionStack[0].options.result as Guild;
+          const dbGuild = await dbManager.getGuild({ discordId: guild.id });
+          const soundManager = new SoundManager(dbGuild);
+          const resp = await request("GET", result.url);
+
+          const duration = await soundManager.getFileDuration(resp.content);
+
+          const errorReason = !!duration
+            ? await soundManager.checkFilePermissions(
+                guild.members.cache.get(msg.author),
+                {
+                  size: result.size,
+                  duration: duration,
+                  name: result.name,
+                }
+              )
+            : "Could not get meta data from the file";
+
+          return !!errorReason ? errorReason : true;
+        },
+      }),
+    ]);
+
     return conv;
-  }
-
-  static createEmbeds<T>(
-    list: T[],
-    itemToTtleAndDescription: (item: T, index: number) => [string, string],
-    modifyEmbed: (embed: MessageEmbed, index: number) => void
-  ): MessageEmbed[] {
-    let embeds: MessageEmbed[] = [];
-    embeds.push(new MessageEmbed());
-
-    for (let i = 0; i < list.length; i++) {
-      let [title, description] = itemToTtleAndDescription(list[i], i);
-      let embed = embeds[embeds.length - 1];
-
-      if (
-        embed.fields.length >= 25 ||
-        embed.length + title.length + description.length >= 6000
-      ) {
-        embeds.push(new MessageEmbed());
-        embed = embeds[embeds.length - 1];
-      }
-
-      embed.addField(title, description, true);
-    }
-
-    embeds.forEach((embed, i) => {
-      let sum = embeds.length;
-      modifyEmbed(embed, i);
-      if (embeds.length > 1) {
-        embed.setDescription(
-          embed.description +
-            (sum > 1 ? "\nPage(" + (i + 1) + "/" + sum + ")" : "")
-        );
-      }
-    });
-    return embeds;
   }
 
   static async getIntersectingGuildsOfAuthor(author: User): Promise<Guild[]> {
@@ -894,6 +991,68 @@ export default class MessageHandler {
       }
     }
     return intersectingGuilds;
+  }
+
+  static getServerAction(conv: Conversation): Action<Guild> {
+    return new Action<Guild>({
+      title: "Server",
+      conv,
+      interactionType: QuestionInteractionType.SELECT,
+      async message(conv) {
+        let intersectingGuilds =
+          await MessageHandler.getIntersectingGuildsOfAuthor(
+            conv.triggerMessage.author
+          );
+
+        const messagePayload = MultiPageMessage.createMultipageMessageOfFields(
+          new MultiPageMessageOfFieldsOptions({
+            channel: conv.triggerMessage.channel,
+            title: "Servers",
+            description: "The servers, that you and the bot are in",
+            fields: intersectingGuilds.map((g, i) => ({
+              name: g.name,
+              value: g.id,
+              inline: true,
+            })),
+          })
+        );
+
+        return messagePayload;
+      },
+      resultToString(conv, result) {
+        return result.name;
+      },
+      async idToResult(conv, id) {
+        return conv.triggerMessage.client.guilds.cache.get(id);
+      },
+    });
+  }
+
+  static getRoleAction(conv: Conversation): Action<string> {
+    return new Action<string>({
+      title: "Roles",
+      conv,
+      interactionType: QuestionInteractionType.MESSAGE,
+      async message(conv) {
+        return {
+          content:
+            "Please write me the role IDs, that are of this permission group (separated by comma and/or space).\nThe id of **@everyone** is the id of the server!",
+        };
+      },
+      resultToString(conv, result) {
+        const ids = result.split(/[^0-9]+/);
+        const guild = conv.actionStack[0].options.result as Guild;
+        return ids.map((id) => guild.roles.cache.get(id).name || id).join(", ");
+      },
+      async verifyResponse(conv, result) {
+        const ids = result.split(/[^0-9]+/);
+        const guild = conv.actionStack[0].options.result as Guild;
+        const isValid = ids.every((id) => guild.roles.cache.has(id));
+        return (
+          isValid || "At least one of the given roles is not in the server"
+        );
+      },
+    });
   }
 }
 

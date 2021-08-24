@@ -7,10 +7,14 @@ import moment from "moment";
 import DatabaseManager from "../DatabaseManager";
 import AuthManager from "./managers/AuthManager";
 import log from "../log";
+// import html from "./callback.html";
 
-const dbManager = new DatabaseManager("discord");
+const dbManager = DatabaseManager.getInstance();
 const authManager = new AuthManager();
 const router = express.Router();
+
+const callbackHtml =
+  '<!DOCTYPE html><script>window.onload=function (){const urlParams=new URLSearchParams(window.location.search); if (window.opener){let code=urlParams.get("code"); window.opener.postMessage({code, source: "callback"}, "*"); window.close();}};</script>';
 
 const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
@@ -66,7 +70,7 @@ router.post("/login", (req, res) => {
 });
 
 router.get("/callback", (req, res) => {
-  res.status(200).sendFile(path.join(__dirname, "callback.html"));
+  res.status(200).send(callbackHtml); //.sendFile(path.join(__dirname, "callback.html"));
 });
 
 module.exports = router;

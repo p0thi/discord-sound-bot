@@ -10,16 +10,26 @@ import {
   MongooseGridFSFileModel,
 } from "mongoose-gridfs";
 import IGuild from "./db/interfaces/IGuild";
+import IUser from "./db/interfaces/IUser";
+import ISound from "./db/interfaces/ISound";
 
 export default class DatabaseManager {
+  private static _instances: DatabaseManager;
   path: string;
   conn: Mongoose;
   AudioFile: MongooseGridFS;
 
-  constructor(path) {
+  private constructor(path) {
     this.path = path;
 
     this.connect();
+  }
+
+  static getInstance() {
+    if (!DatabaseManager._instances) {
+      DatabaseManager._instances = new DatabaseManager("discord");
+    }
+    return DatabaseManager._instances;
   }
 
   async connect() {
@@ -91,15 +101,29 @@ export default class DatabaseManager {
   }
 
   async getGuild(cond: FilterQuery<IGuild>, content?: any): Promise<IGuild> {
-    let guild = await Guild.findOne(cond).exec();
-    if (!guild) {
-      try {
-        guild = await Guild.create(content || cond);
-      } catch (e) {
-        console.error(e);
+    return new Promise<IGuild>(async (resolve, reject) => {
+      let guild = await Guild.findOne(cond).exec();
+      if (!guild) {
+        guild =
+          (await Guild.create(content || cond).catch(async () => {
+            guild =
+              (await Guild.findOne(cond).exec().catch(reject)) || undefined;
+
+            if (!guild) {
+              reject();
+            } else {
+              resolve(guild);
+            }
+          })) || undefined;
+        if (guild) {
+          resolve(guild);
+        } else {
+          reject();
+        }
+      } else {
+        resolve(guild);
       }
-    }
-    return guild;
+    });
   }
 
   async getSound(cond) {
@@ -107,33 +131,58 @@ export default class DatabaseManager {
     return sound;
   }
 
-  async getSounds(cond) {
+  async getSounds(cond): Promise<ISound[]> {
     let sounds = await Sound.find(cond).exec();
     return sounds;
   }
 
-  async getSoundById(id: string | ObjectId) {
+  async getSoundById(id: string | ObjectId): Promise<ISound> {
     let sound = await Sound.findById(id).exec();
     return sound;
   }
 
-  async getRandomSoundForGuild(guildId) {
-    return await Sound.aggregate([
-      { $match: { guild: guildId } },
-      { $sample: { size: 1 } },
-    ]);
+  async getRandomSoundForGuild(guildId: string): Promise<ISound> {
+    return (
+      await Sound.aggregate<ISound>([
+        { $match: { guild: guildId } },
+        { $sample: { size: 1 } },
+      ])
+    )[0];
   }
 
-  async getAllGuildSounds(guild) {
+  async getAllGuildSounds(guild: IGuild) {
     let sounds = await Sound.find({ guild });
     return sounds;
   }
 
-  async getUser(cond, content?) {
-    let user = await User.findOne(cond).exec();
-    if (!user) {
-      user = await User.create(content || cond);
-    }
-    return user;
+  async getUser(cond) {
+    return new Promise<IUser>(async (resolve, reject) => {
+      let user = await User.findOne(cond).exec();
+      if (!user) {
+        user =
+          (await User.create(cond).catch(async () => {
+            user =
+              (await User.findOne(cond)
+                .exec()
+                .catch(() => {
+                  reject();
+                })) || undefined;
+
+            if (!user) {
+              reject();
+            } else {
+              resolve(user);
+            }
+          })) || undefined;
+
+        if (user) {
+          resolve(user);
+        } else {
+          reject();
+        }
+      } else {
+        resolve(user);
+      }
+    });
   }
 }

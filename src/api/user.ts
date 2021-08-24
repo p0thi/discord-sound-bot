@@ -5,7 +5,7 @@ import AuthManager from "./managers/AuthManager";
 import log from "../log";
 
 const authManager = new AuthManager();
-const dbManager = new DatabaseManager("discord");
+const dbManager = DatabaseManager.getInstance();
 
 const router = Router();
 

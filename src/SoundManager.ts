@@ -11,8 +11,30 @@ import SoundModel from "./db/models/Sound";
 import IUser from "./db/interfaces/IUser";
 import IGuild from "./db/interfaces/IGuild";
 import ISound from "./db/interfaces/ISound";
+import DatabaseGuildManager from "./DatabaseGuildManager";
+import {
+  CommandInteraction,
+  GuildMember,
+  Interaction,
+  Message,
+  MessagePayload,
+  MessageTarget,
+  PartialTextBasedChannel,
+  SelectMenuInteraction,
+  TextBasedChannel,
+  TextBasedChannels,
+  TextChannel,
+  VoiceChannel,
+} from "discord.js";
+import log from "./log";
+import { hyperlink } from "@discordjs/builders";
+import AudioManager from "./AudioManager";
+import MultiPageMessage, {
+  MultiPageMessageOfFieldsOptions,
+} from "./MultiPageMessage";
+import MessageDeleter from "./MessageDeleter";
 
-const dbManager = new DatabaseManager("discord");
+const dbManager = DatabaseManager.getInstance();
 const prohibitedCommands = [
   "help",
   "hilfe",
@@ -27,37 +49,64 @@ const prohibitedCommands = [
 ];
 
 export default class SoundManager {
+  dbGuild: IGuild;
   maxSize: number;
-  maxLength: number;
   fileTypes: string[];
 
   filename: string;
   oldFilename: string;
   soundFile: MongooseGridFSFileModel;
-  constructor({
-    maxSize = 1000000,
-    maxLength = 30,
-    fileTypes = ["mp3", "flac"],
-  } = {}) {
+  constructor(
+    dbGuild: IGuild,
+    { maxSize = 1000000, fileTypes = ["mp3", "flac"] } = {}
+  ) {
     this.maxSize = maxSize;
-    this.maxLength = maxLength;
     this.fileTypes = fileTypes;
+    this.dbGuild = dbGuild;
   }
 
-  checkFileSize(size: number) {
+  async checkFilePermissions(
+    member: GuildMember,
+    data: FileData
+  ): Promise<string | void> {
+    const dbGuildManager = new DatabaseGuildManager(this.dbGuild);
+    if (!(await dbGuildManager.canAddSounds(member))) {
+      return "You can not upload sounds";
+    }
+    if (await dbGuildManager.maxGuildSoundsReached()) {
+      return `Max amount of sounds for this server reached (${this.dbGuild.maxSounds})`;
+    }
+    if (await dbGuildManager.maxMemberSoundsReached(member)) {
+      return `Max amount of sounds for this user reached (${dbGuildManager.getMaxSoundsPerUser(
+        member
+      )})`;
+    }
+    if (!this.checkFileExtension(data.name)) {
+      return `File type is not supported (only ${this.fileTypes.join(", ")})`;
+    }
+    if (!this.checkFileSize(data.size)) {
+      return "File is too big";
+    }
+    const maxDurationForMember =
+      dbGuildManager.getMaxSoundDurationForMember(member);
+    if (data.duration > maxDurationForMember) {
+      return `File is too long (max ${maxDurationForMember} sec)`;
+    }
+    return;
+  }
+
+  private checkFileSize(size: number) {
     return size <= this.maxSize;
   }
 
-  async checkFileMetadata(buffer: Buffer) {
-    let metadata = await parseBuffer(buffer);
-    return this.checkFileDuration(metadata.format.duration);
+  async getFileDuration(buffer: Buffer): Promise<number | void> {
+    const audioMetaData = await parseBuffer(buffer).catch((e) => {
+      log.error("could not parse audio");
+    });
+    return !!audioMetaData ? audioMetaData.format.duration : undefined;
   }
 
-  checkFileDuration(duration: number) {
-    return duration <= this.maxLength;
-  }
-
-  checkFileExtension(fullFileName: string) {
+  private checkFileExtension(fullFileName: string) {
     let split = fullFileName.split(".");
     let ext = split[split.length - 1];
 
@@ -92,7 +141,7 @@ export default class SoundManager {
       this.soundFile = soundFile;
       return soundFile;
     } catch (e) {
-      console.log(e);
+      log.error(e);
       throw e;
     }
   }
@@ -115,15 +164,17 @@ export default class SoundManager {
         guild,
         creator,
       });
-      console.log("sound", sound);
       return sound;
     } catch (e) {
-      console.log(e);
+      log.error(e);
       throw e;
     }
   }
 
-  static async isCommandIllegal(command: string, guild: IGuild) {
+  static async isCommandIllegal(
+    command: string,
+    guild: IGuild
+  ): Promise<string | void> {
     command = command.trim();
     if (!command || !guild) {
       throw new Error("Not all arguments provided");
@@ -147,24 +198,103 @@ export default class SoundManager {
       }
     }
 
-    return false;
+    return;
   }
 
-  static isDescriptionIllegal(description: string) {
+  static isDescriptionIllegal(description: string): string | void {
     if (/^.{3,60}$/.test(description.trim())) {
-      return false;
+      return;
     }
     return "Description is to short or too long.";
   }
 
   static async deleteSound(sound: ISound) {
-    console.log("sound", sound.id);
     try {
       await dbManager.unlinkFile(sound.file);
       await sound.delete();
     } catch (e) {
-      console.log(e);
+      log.error(e);
       throw e;
     }
   }
+  static async sendCommandsList(
+    target: TextBasedChannels | CommandInteraction,
+    channel: TextBasedChannels,
+    dbGuild: IGuild,
+    search?: string
+  ) {
+    const deleter = MessageDeleter.getInstance();
+    const sounds = (await dbManager.getAllGuildSounds(dbGuild)).sort((a, b) =>
+      a.command.localeCompare(b.command)
+    );
+    const filteredSounds = sounds.filter(
+      (s) =>
+        !search ||
+        s.command.toLowerCase().includes(search.toLowerCase()) ||
+        s.description.toLowerCase().includes(search.toLowerCase())
+    );
+    const botUrl = `https://sounds.pothi.eu/#/guilds?guild=${dbGuild.discordId}`;
+    const messageOptions = MultiPageMessage.createMultipageMessageOfFields(
+      new MultiPageMessageOfFieldsOptions({
+        channel,
+        title: "All commands",
+        url: botUrl,
+        description: `Here is a list of all sound commmands of this server. You can also find them ${hyperlink(
+          "here",
+          botUrl
+        )}\nYou can select one at the time in the drop down menu below to play it.`,
+        fields: filteredSounds.map((sound) => ({
+          name: dbGuild.commandPrefix + sound.command,
+          value: sound.description,
+          inline: true,
+        })),
+        withSelectMenu: true,
+        fieldToUseForSelectValue: "name",
+      })
+    );
+
+    MessagePayload.create(target, messageOptions);
+
+    let message;
+    if (target instanceof Interaction) {
+      message = await target.followUp(messageOptions);
+    } else {
+      message = await target.send(messageOptions);
+    }
+
+    deleter.add(message, 550000);
+    const collector = message.createMessageComponentCollector({
+      componentType: "SELECT_MENU",
+      time: 600000,
+    });
+    collector.on("collect", async (component: SelectMenuInteraction) => {
+      component.deferUpdate();
+      const member = component.member as GuildMember;
+      const command = component.values[0].match(dbGuild.commandPrefix)
+        ? component.values[0].replace(dbGuild.commandPrefix, "")
+        : component.values[0];
+      const sound = await dbManager.getSound({
+        guild: dbGuild,
+        command,
+      });
+      if (!sound) {
+        component.followUp({
+          content: "That sound doesn't exist",
+          ephemeral: true,
+        });
+        return;
+      }
+      new AudioManager().memberPlaySound(
+        member,
+        sound,
+        member.voice.channel as VoiceChannel
+      );
+    });
+  }
+}
+
+export interface FileData {
+  name: string;
+  size: number;
+  duration: number;
 }

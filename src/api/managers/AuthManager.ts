@@ -2,8 +2,9 @@ import jwt from "jsonwebtoken";
 import DatabaseManager from "../../DatabaseManager";
 import moment from "moment";
 import fetch from "node-fetch";
+import log from "../../log";
 
-const dbManager = new DatabaseManager("discord");
+const dbManager = DatabaseManager.getInstance();
 
 const BASE_URL = process.env.BASE_URL;
 
@@ -67,7 +68,7 @@ export default class AuthManager {
     try {
       decoded = jwt.verify(token, "asdf");
     } catch (e) {
-      console.log(e);
+      log.error(e);
       return null;
     }
     if (!decoded || !decoded.id) {

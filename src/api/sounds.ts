@@ -9,9 +9,10 @@ import log from "../log";
 import { _sendError } from "./utils";
 import SoundModel from "../db/models/Sound";
 import { StageChannel } from "discord.js";
+import DatabaseGuildManager from "../DatabaseGuildManager";
 
 const authManager = new AuthManager();
-const dbManager = new DatabaseManager("discord");
+const dbManager = DatabaseManager.getInstance();
 const audioManager = new AudioManager();
 
 const router = Router();
@@ -91,6 +92,12 @@ router.get("/play", playRateLimit, async (req, res) => {
     return;
   }
 
+  const dbGuildManager = new DatabaseGuildManager(dbGuild);
+  if (!(await dbGuildManager.canPlaySounds(guildMember))) {
+    _sendError(res, "User is not allowed to play sounds");
+    return;
+  }
+
   const channel = voiceState.channel;
   if (!channel || channel instanceof StageChannel) {
     _sendError(res, "You have to be in a channel", 409);
@@ -99,7 +106,7 @@ router.get("/play", playRateLimit, async (req, res) => {
 
   const shouldBlock = req.query.block || true;
 
-  audioManager.play(sound, channel).then(() => {
+  audioManager.memberPlaySound(guildMember, sound, channel).then(() => {
     res.status(200).send();
   });
   if (!shouldBlock || shouldBlock === "false") {
@@ -108,7 +115,6 @@ router.get("/play", playRateLimit, async (req, res) => {
 });
 
 router.get("/listen/:id", async (req, res) => {
-  console.log(req.params.id);
   const sound = await SoundModel.findOne({ _id: req.params.id })
     .populate("guild")
     .exec();
@@ -143,7 +149,6 @@ router.get("/listen/:id", async (req, res) => {
   }
 
   const ext = file.filename.split(".").pop();
-  console.log(ext);
   const fileStream = dbManager.getFileStream(sound.file);
   res.setHeader("Content-Type", `audio/${ext}`);
   fileStream.pipe(res);
@@ -151,10 +156,13 @@ router.get("/listen/:id", async (req, res) => {
 });
 
 router.post("/upload", fileUpload(), async (req, res) => {
-  const guild = await dbManager.getGuild({ discordId: req.body.guild });
+  const [dbGuild, member] = await Promise.all([
+    dbManager.getGuild({ discordId: req.body.guild }),
+    req.bot.guilds.cache.get(req.body.guild).members.fetch(req.userId),
+  ]);
   const command = req.body.command;
 
-  const commandIllegal = await SoundManager.isCommandIllegal(command, guild);
+  const commandIllegal = await SoundManager.isCommandIllegal(command, dbGuild);
   if (!!commandIllegal) {
     _sendError(res, commandIllegal);
     return;
@@ -168,7 +176,7 @@ router.post("/upload", fileUpload(), async (req, res) => {
     return;
   }
 
-  const soundManager = new SoundManager();
+  const soundManager = new SoundManager(dbGuild);
   const file = req.files.file;
 
   if (!file) {
@@ -176,18 +184,24 @@ router.post("/upload", fileUpload(), async (req, res) => {
     return;
   }
 
-  if (!soundManager.checkFileSize((file as UploadedFile).size)) {
-    _sendError(res, "File too big");
+  const duration = await soundManager.getFileDuration(
+    (file as UploadedFile).data
+  );
+
+  if (!duration) {
+    log.info(`Could not get medatada from file`);
+    _sendError(res, "Could not get metadata from file");
     return;
   }
 
-  if (!soundManager.checkFileExtension((file as UploadedFile).name)) {
-    _sendError(res, "Wrong file format");
-    return;
-  }
+  const errorReason = await soundManager.checkFilePermissions(member, {
+    size: (file as UploadedFile).size,
+    duration,
+    name: (file as UploadedFile).name,
+  });
 
-  if (!soundManager.checkFileMetadata((file as UploadedFile).data)) {
-    _sendError(res, "Audio too long ( >30 sec)");
+  if (errorReason) {
+    _sendError(res, errorReason);
     return;
   }
 
@@ -205,7 +219,7 @@ router.post("/upload", fileUpload(), async (req, res) => {
     sound = await soundManager.createSound(
       command,
       description,
-      guild,
+      dbGuild,
       creator
     );
   } catch (e) {
@@ -222,7 +236,6 @@ router.delete("/delete", async (req, res) => {
     .populate("creator")
     .populate("guild")
     .exec();
-  console.log("sound", sound);
   const dbGuild = sound.guild;
   const botGuild = await req.bot.guilds.fetch(dbGuild.discordId);
 
@@ -285,7 +298,6 @@ router.post("/joinsound", async (req, res) => {
     const sound = await SoundModel.findOne({ _id: req.body.sound })
       .populate("guild")
       .exec();
-    console.log("sound", sound);
     guild = sound.guild;
     guild.joinSounds.set(req.userId, sound._id);
   }

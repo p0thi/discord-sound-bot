@@ -2,8 +2,9 @@ import DatabaseManager from "./DatabaseManager";
 import AudioManager from "./AudioManager";
 import log from "./log";
 import { Client, StageChannel, VoiceState } from "discord.js";
+import DatabaseGuildManager from "./DatabaseGuildManager";
 
-const dbManager = new DatabaseManager("discord");
+const dbManager = DatabaseManager.getInstance();
 const audioManager = new AudioManager();
 export default class JoinHandler {
   bot: Client;
@@ -29,6 +30,13 @@ export default class JoinHandler {
         }
 
         let guild = await dbManager.getGuild({ discordId: newState.guild.id });
+        const dbGuildManager = new DatabaseGuildManager(guild);
+
+        if (!(await dbGuildManager.canUseJoinSound(newState.member))) {
+          log.info("Member can not use join sounds");
+          return;
+        }
+
         let soundId = guild.joinSounds.get(newState.member.id);
 
         if (!soundId) {
@@ -45,7 +53,7 @@ export default class JoinHandler {
           return;
         }
 
-        audioManager.play(sound, newState.channel);
+        audioManager.memberPlaySound(newState.member, sound, newState.channel);
       }
     }
   }

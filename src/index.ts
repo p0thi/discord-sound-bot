@@ -6,6 +6,10 @@ import expressServer from "./api/express-server";
 import DatabaseManager from "./DatabaseManager";
 import Discord, { Intents } from "discord.js";
 import log from "./log";
+import ContextMenuCommandManager from "./managers/ContextMenuCommandManager";
+import SlashCommandManager from "./managers/SlashCommandManager";
+import BotGuildManager from "./managers/BotGuildManager";
+import ACommandManager from "./managers/ACommandManager";
 
 const soundBot = new Discord.Client({
   intents: [
@@ -17,11 +21,16 @@ const soundBot = new Discord.Client({
   ],
   partials: ["CHANNEL", "GUILD_MEMBER"],
 });
-const dbManager = new DatabaseManager("discord");
+const dbManager = DatabaseManager.getInstance();
 
 log.info("starting for " + process.env.NODE_ENV);
 
 const soundBotToken = process.env.SOUND_BOT_TOKEN; // dev
+
+const slashCommandManager = SlashCommandManager.getInstance(soundBot);
+const contextMenuCommandManager =
+  ContextMenuCommandManager.getInstance(soundBot);
+const botGuildManager = new BotGuildManager(soundBot);
 
 soundBot.on("ready", async () => {
   const statusSetter = () => {
@@ -34,10 +43,15 @@ soundBot.on("ready", async () => {
   statusSetter();
   setInterval(statusSetter, 1800000);
 
-  log.info("Fetching/creating guilds in database");
-  for (const guild of soundBot.guilds.cache) {
-    await dbManager.getGuild({ discordId: guild[0] });
-  }
+  botGuildManager.start();
+
+  slashCommandManager.start();
+  contextMenuCommandManager.start();
+
+  // ACommandManager.setGuildCommands(
+  //   slashCommandManager,
+  //   contextMenuCommandManager
+  // );
   log.info("Bot is ready");
 });
 
