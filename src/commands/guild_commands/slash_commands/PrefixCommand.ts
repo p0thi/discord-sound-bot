@@ -80,9 +80,6 @@ export default class PrefixCommand
 
   async generateTemplate(): Promise<SlashCommandTemplate> {
     const permission = GroupPermission.MANAGE_GUILD_SETTINGS;
-    const templateDbGuild = await dbManager.getGuild({
-      discordId: this.guild.id,
-    });
     return {
       name: this.name,
       description:
@@ -91,12 +88,6 @@ export default class PrefixCommand
       defaultPermission: this.defaultPermission,
       permission,
       create: (): CustomApplicationCommand => {
-        const permissionGroups = templateDbGuild.permissionGroups.map(
-          (group) => ({
-            name: group.name,
-            value: group.id,
-          })
-        );
         return {
           name: this.name,
           description: "Change the command prefix",

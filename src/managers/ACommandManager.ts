@@ -62,8 +62,8 @@ export default abstract class ACommandManager
   abstract getTemplates(): Promise<Map<Guild, Template[]>>;
 
   static async setGuildCommands(guild: Guild, ...managers: ACommandManager[]) {
+    await guild.client.guilds.fetch();
     const templates: Map<Guild, Template[]> = new Map();
-    console.log(1);
     for (const manager of managers) {
       const currentTemplates = await manager.getTemplates().catch((e) => {
         return new Map<Guild, Template[]>();

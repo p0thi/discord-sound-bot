@@ -63,9 +63,6 @@ export default class PlayCommand
 
   async generateTemplate(): Promise<SlashCommandTemplate> {
     const permission = GroupPermission.PLAY_SOUNDS;
-    const templateDbGuild = await dbManager.getGuild({
-      discordId: this.guild.id,
-    });
     return {
       name: this.name,
       description: "Play sound in current channel",

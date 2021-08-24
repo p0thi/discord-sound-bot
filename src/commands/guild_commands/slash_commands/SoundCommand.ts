@@ -61,11 +61,6 @@ export default class SoundCommand
 
   async generateTemplate(): Promise<SlashCommandTemplate> {
     const permission = GroupPermission.ADD_SOUNDS;
-    const templateDbGuild = await dbManager
-      .getGuild({
-        discordId: this.guild.id,
-      })
-      .catch((e) => console.error(e));
     return {
       name: this.name,
       description: "Add, download and remove sounds from the bot.",

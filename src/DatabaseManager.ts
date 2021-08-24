@@ -107,14 +107,16 @@ export default class DatabaseManager {
       if (!guild) {
         guild =
           (await Guild.create(content || cond).catch(async (e) => {
-            guild =
-              (await Guild.findOne(cond).exec().catch(reject)) || undefined;
+            setTimeout(async () => {
+              guild =
+                (await Guild.findOne(cond).exec().catch(reject)) || undefined;
 
-            if (!guild) {
-              return reject();
-            } else {
-              return resolve(guild);
-            }
+              if (!guild) {
+                return reject();
+              } else {
+                return resolve(guild);
+              }
+            }, 200 + Math.ceil(Math.random() * 800));
           })) || undefined;
         if (guild) {
           return resolve(guild);
@@ -162,13 +164,16 @@ export default class DatabaseManager {
       if (!user) {
         user =
           (await User.create(cond).catch(async () => {
-            user = (await User.findOne(cond).exec().catch(reject)) || undefined;
+            setTimeout(async () => {
+              user =
+                (await User.findOne(cond).exec().catch(reject)) || undefined;
 
-            if (!user) {
-              return reject();
-            } else {
-              return resolve(user);
-            }
+              if (!user) {
+                return reject();
+              } else {
+                return resolve(user);
+              }
+            }, 200 + Math.ceil(Math.random() * 800));
           })) || undefined;
 
         if (user) {
