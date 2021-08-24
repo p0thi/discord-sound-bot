@@ -15,7 +15,7 @@ on:
       - v*
 
 env:
-  IMAGE_NAME: discord-valorant-tournament-bot
+  IMAGE_NAME: discord-sound-bot
 
 jobs:
   push:
