@@ -123,7 +123,9 @@ router.get("/all", async (req, res) => {
                   try {
                     guild.icon = botGuild.iconURL();
                     guild.name = botGuild.name;
-                    guild.owner = botGuild.ownerId === req.userId;
+                    guild.owner =
+                      botGuild.ownerId === req.userId ||
+                      (!!req.userId && req.userId === process.env.BOT_OWNER);
 
                     guild.userPermissions = dbGuildManager
                       .getMemberGroupPermissions(member)
