@@ -10,7 +10,7 @@ const app = express();
 
 export default {
   init(bot) {
-    app.listen(8080, "localhost", () => {
+    app.listen(8080, "0.0.0.0", () => {
       console.info("Running on port 8080");
     });
 
