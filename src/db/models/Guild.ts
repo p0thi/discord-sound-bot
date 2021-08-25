@@ -13,6 +13,7 @@ export enum GroupPermission {
 
 export const defaultMaxSounds = 30;
 export const defaultMaxDuration = 10;
+export const defaultGroupName = "Default";
 
 export const groupPermissions = new Map(
   Object.entries(GroupPermission).map((entry) => entry.reverse()) as [
@@ -56,9 +57,9 @@ const guildSchema: Schema = new Schema(
         const _t = this as IGuild;
         return [
           {
-            name: "Default",
-            maxSoundDuration: _t.maxSoundDuration,
-            maxSoundsPerUser: _t.maxSounds,
+            name: defaultGroupName,
+            maxSoundDuration: defaultMaxDuration,
+            maxSoundsPerUser: defaultMaxSounds,
             discordRoles: [_t.discordId],
             permissions: ["ADD_SOUNDS", "PLAY_SOUNDS", "USE_JOIN_SOUND"],
           },

@@ -6,7 +6,10 @@ import { _sendError } from "./utils";
 import log from "../log";
 import IGuild, { IPermissionGroup } from "../db/interfaces/IGuild";
 import { Mongoose, ObjectId } from "mongoose";
-import GuildModel, { reverseGroupPermissions } from "../db/models/Guild";
+import GuildModel, {
+  defaultGroupName,
+  reverseGroupPermissions,
+} from "../db/models/Guild";
 import DatabaseGuildManager from "../DatabaseGuildManager";
 import logger from "../log";
 import SlashCommandManager from "../managers/SlashCommandManager";
@@ -60,15 +63,22 @@ router.patch("/group/edit/:guild/:id", async (req, res) => {
     return;
   }
 
-  const group = dbGuild.permissionGroups.id(req.params.id);
+  let group = dbGuild.permissionGroups.id(req.params.id);
 
-  if (!group) {
+  if (
+    !group &&
+    dbGuild.permissionGroups.length === 1 &&
+    dbGuild.permissionGroups[0].name === defaultGroupName
+  ) {
+    group = dbGuild.permissionGroups[0];
+  } else if (!group) {
     _sendError(res, "Group not found");
     return;
   }
-
   const modifiedGroup = Object.assign(group, req.body);
+
   const savedGuild = await dbGuild.save().catch((err) => {
+    log.error(err);
     log.error("Could not edit permission group");
   });
 
