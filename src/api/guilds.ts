@@ -88,7 +88,10 @@ router.get("/all", async (req, res) => {
                         ],
                       },
                       banned: {
-                        $in: [Types.ObjectId(user.id), "$bannedUsers"],
+                        $in: [
+                          Types.ObjectId(user.id),
+                          { $ifNull: ["$bannedUsers", []] },
+                        ],
                       },
                       sounds: {
                         $size: "$sounds",

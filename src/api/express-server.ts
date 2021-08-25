@@ -10,8 +10,8 @@ const app = express();
 
 export default {
   init(bot) {
-    app.listen(8080, "0.0.0.0", () => {
-      console.info("Running on port 8080");
+    app.listen(8123, "0.0.0.0", () => {
+      console.info("Running on port 8123");
     });
 
     app.use(bodyParser.urlencoded({ extended: false }));

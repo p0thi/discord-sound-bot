@@ -5,5 +5,5 @@ COPY package.json /usr/src/app/
 RUN yarn install
 COPY . /usr/src/app
 RUN yarn build
-EXPOSE 8080
+EXPOSE 8123
 CMD [ "yarn", "start" ]

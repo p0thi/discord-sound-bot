@@ -22,7 +22,8 @@ export default class AuthManager {
 
   async getDiscordToken(user) {
     if (!user.accessToken && !user.refreshToken) {
-      throw new Error("User has no credentials");
+      log.error("User has no credentials");
+      return undefined;
     }
 
     let expired = moment(user.expireDate)
