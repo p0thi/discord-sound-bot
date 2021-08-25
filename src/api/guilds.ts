@@ -9,7 +9,11 @@ import IGuild, {
   IPermissionGroup,
 } from "../db/interfaces/IGuild";
 import { Types } from "mongoose";
-import GuildModel, { groupPermissions } from "../db/models/Guild";
+import GuildModel, {
+  defaultMaxDuration,
+  defaultMaxSounds,
+  groupPermissions,
+} from "../db/models/Guild";
 import DatabaseGuildManager from "../DatabaseGuildManager";
 
 const authManager = new AuthManager();
@@ -96,8 +100,10 @@ router.get("/all", async (req, res) => {
                       sounds: {
                         $size: "$sounds",
                       },
-                      maxSounds: true,
-                      maxSoundDuration: true,
+                      maxSounds: { $ifNull: ["$maxSounds", defaultMaxSounds] },
+                      maxSoundDuration: {
+                        $ifNull: ["$maxSoundDuration", defaultMaxDuration],
+                      },
                     },
                   },
                 ]);

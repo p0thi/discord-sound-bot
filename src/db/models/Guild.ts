@@ -11,6 +11,9 @@ export enum GroupPermission {
   USE_JOIN_SOUND = "Allows to use a join sound on the server",
 }
 
+export const defaultMaxSounds = 30;
+export const defaultMaxDuration = 10;
+
 export const groupPermissions = new Map(
   Object.entries(GroupPermission).map((entry) => entry.reverse()) as [
     GroupPermission,
@@ -45,8 +48,8 @@ const guildSchema: Schema = new Schema(
   {
     // _id: mongoose.Schema.Types.ObjectId,
     discordId: { type: String, unique: true, required: true },
-    maxSounds: { type: Number, default: 30 },
-    maxSoundDuration: { type: Number, default: 10 },
+    maxSounds: { type: Number, default: defaultMaxSounds },
+    maxSoundDuration: { type: Number, default: defaultMaxDuration },
     permissionGroups: {
       type: [permissionGroupSchema],
       default() {
