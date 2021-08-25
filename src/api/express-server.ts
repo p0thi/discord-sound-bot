@@ -10,8 +10,8 @@ const app = express();
 
 export default {
   init(bot) {
-    app.listen(50451, "localhost", () => {
-      console.info("Running on port 50451");
+    app.listen(8080, "localhost", () => {
+      console.info("Running on port 8080");
     });
 
     app.use(bodyParser.urlencoded({ extended: false }));
