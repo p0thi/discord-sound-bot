@@ -60,26 +60,7 @@ router.get("/all", async (req, res) => {
   //   );
 
   const result: CommandsResponse = {
-    globalSlashCommands: [
-      {
-        name: "help",
-        description: "Displays help message",
-        type: "COMMAND",
-      },
-      {
-        name: "commands",
-        description: "Displays all sound commands",
-        type: "COMMAND",
-        options: [
-          {
-            name: "search",
-            description: "Only show commands containing this",
-            type: "STRING",
-            required: false,
-          },
-        ],
-      },
-    ],
+    globalSlashCommands: [],
     slashCommands: slashCommandTemplates.map((command) =>
       HelpCommand.commandToDecriptionLayer(command)
     ),

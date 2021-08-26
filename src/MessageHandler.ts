@@ -185,7 +185,6 @@ export default class MessageHandler {
             embed.setDescription(
               "**Here you can find all commands with a short description** :blush: "
             );
-            embed.setColor("ORANGE");
 
             // upload
             embed.addField(

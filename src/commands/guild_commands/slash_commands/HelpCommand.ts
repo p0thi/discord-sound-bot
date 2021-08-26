@@ -77,6 +77,14 @@ export default class HelpCommand
             interaction.deferReply({ ephemeral: true });
             const guild = interaction.guild;
 
+            if (!guild) {
+              interaction.followUp({
+                content: "This command can only be used in a server",
+                ephemeral: true,
+              });
+              return;
+            }
+
             const dbGuild = await dbManager.getGuild({
               discordId: guild.id,
             });
@@ -127,10 +135,16 @@ export default class HelpCommand
                   title: "All slash commands",
                   description:
                     'Commands, that are triggered in the chat by typing a "/" followed by the command',
-                  fields: HelpCommand.templatesToFields(
-                    slashCommandTemplates,
-                    "/"
-                  ),
+                  fields: [
+                    SlashCommandCreator.globalCommands.map((c) => ({
+                      name: `/${c.command.name}`,
+                      value: `${c.description}`,
+                    })),
+                    ...HelpCommand.templatesToFields(
+                      slashCommandTemplates,
+                      "/"
+                    ),
+                  ],
                 },
                 {
                   title: "All user context menu commands",

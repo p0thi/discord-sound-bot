@@ -69,23 +69,31 @@ export default class CommandsCommand
           name: this.name,
           description: "List all sound commands",
           defaultPermission: this.defaultPermission,
+          options: [
+            {
+              name: "search",
+              description: "Only show commands containing this",
+              type: "STRING",
+            },
+          ],
           handler: async (interaction: CommandInteraction) => {
-            interaction.deferReply();
             const guild = interaction.guild;
 
             if (!guild) {
               interaction.reply({
-                content: "This command has to be used in on server",
+                content: "This command has to be used in a server",
                 ephemeral: true,
               });
               return;
             }
+
+            const search = interaction.options.getString("search");
+            console.log(search);
+
             const [dbGuild, dbUser] = await Promise.all([
               dbManager.getGuild({ discordId: guild.id }),
               dbManager.getUser({ discordId: interaction.user.id }),
             ]);
-
-            const member = interaction.member as GuildMember;
             const dbGuildManager = new DatabaseGuildManager(dbGuild);
 
             if (dbGuildManager.isBanned(dbUser)) {
@@ -95,11 +103,13 @@ export default class CommandsCommand
               });
               return;
             }
+            interaction.deferReply();
 
             SoundManager.sendCommandsList(
               interaction,
               interaction.channel,
-              dbGuild
+              dbGuild,
+              search
             );
           },
         } as CustomApplicationCommand;
