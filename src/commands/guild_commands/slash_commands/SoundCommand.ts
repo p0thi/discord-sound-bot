@@ -20,6 +20,7 @@ import { v1 as uuid } from "uuid";
 import request from "http-async";
 import IPermissionChangeObserver from "../IPermissionChangeObserver";
 import log from "../../../log";
+import { hyperlink } from "@discordjs/builders";
 
 const dbManager = DatabaseManager.getInstance();
 
@@ -170,18 +171,83 @@ export default class SoundCommand
                     return;
                   }
 
-                  const messageCollector =
-                    interaction.channel.createMessageCollector({
-                      filter: (m: Message) =>
-                        m.author.id === interaction.user.id,
-                      time: 60000,
+                  const dmChannel = await interaction.user
+                    .createDM()
+                    .catch((e) => {
+                      log.warn("could not create DM channel");
                     });
+
+                  if (!dmChannel) {
+                    interaction.followUp({
+                      content:
+                        "I could not send you a DM. That would be required.",
+                      ephemeral: true,
+                    });
+                    return;
+                  }
 
                   const soundManager = new SoundManager(dbGuild);
                   const uid = uuid();
 
+                  const question = await dmChannel
+                    .send({
+                      content: `You are about to create Please send me the audio file now in **FLAC** or **MP3** format.`,
+                      embeds: [
+                        {
+                          title: "Please send me the audio file",
+                          description: `You are about to create a sound command on the server ${hyperlink(
+                            guild.name,
+                            `https://discord.com/channels/${guild.id}`
+                          )}\nPlease send me the audio file now in **FLAC** or **MP3** format.`,
+                          fields: [
+                            {
+                              name: "Command",
+                              value: command,
+                              inline: true,
+                            },
+                            {
+                              name: "Description",
+                              value: description,
+                              inline: true,
+                            },
+                          ],
+                        },
+                      ],
+                      components: [
+                        new MessageActionRow().addComponents([
+                          new MessageButton()
+                            .setCustomId(`abort#${uid}`)
+                            .setLabel("Abort")
+                            .setStyle("SECONDARY"),
+                        ]),
+                      ],
+                    })
+                    .catch((e) => {
+                      log.error("Could not send dm to ask for file");
+                    });
+
+                  if (!question) {
+                    interaction.followUp({
+                      content:
+                        "I could not send you a DM. That would be required.",
+                      ephemeral: true,
+                    });
+                    return;
+                  }
+
+                  interaction.followUp({
+                    content:
+                      "I sent you a DM. Please send me the audio file there",
+                    ephemeral: true,
+                  });
+
+                  const messageCollector = dmChannel.createMessageCollector({
+                    filter: (m: Message) => m.author.id === interaction.user.id,
+                    time: 60000,
+                  });
+
                   const buttonCollector =
-                    interaction.channel.createMessageComponentCollector({
+                    dmChannel.createMessageComponentCollector({
                       componentType: "BUTTON",
                       time: 60000,
                       filter: (b) => b.user.id === interaction.user.id,
@@ -192,6 +258,9 @@ export default class SoundCommand
                         content: "Cancelled",
                         ephemeral: true,
                       });
+                      question.delete().catch((e) => {
+                        log.warn("Could not delete question");
+                      });
                       buttonCollector.stop();
                       messageCollector.stop();
                       return;
@@ -200,10 +269,9 @@ export default class SoundCommand
 
                   messageCollector.on("collect", async (collected) => {
                     if (collected.attachments.size !== 1) {
-                      interaction.followUp({
-                        content: "You need to attach exactly one sound file",
-                        ephemeral: true,
-                      });
+                      collected.reply(
+                        "You need to attach exactly one sound file"
+                      );
                       return;
                     }
 
@@ -215,11 +283,9 @@ export default class SoundCommand
                     );
 
                     if (!duration) {
-                      interaction.followUp({
-                        content:
-                          "Could not get audio metadata from file. Wrong file format?",
-                        ephemeral: true,
-                      });
+                      collected.reply(
+                        "Could not get audio metadata from file. Wrong file format?"
+                      );
                       return;
                     }
 
@@ -233,9 +299,11 @@ export default class SoundCommand
                     );
 
                     if (errorReason) {
-                      interaction.followUp({
-                        content: `${member.displayName}: ${errorReason}\nAborting...`,
-                        ephemeral: true,
+                      collected.reply(
+                        `${member.displayName}: ${errorReason}\nAborting...`
+                      );
+                      question.edit({ components: [] }).catch((e) => {
+                        log.warn("Could not remove components from question");
                       });
                       messageCollector.stop();
                       buttonCollector.stop();
@@ -252,38 +320,23 @@ export default class SoundCommand
                       });
 
                     if (!sound) {
-                      interaction.followUp({
-                        content: "Error. Could not save the sound",
-                        ephemeral: true,
-                      });
+                      collected.reply("Error. Could not save the sound");
                       return;
                     }
-
+                    question.edit({ components: [] }).catch((e) => {
+                      log.warn("Could not remove components from question");
+                    });
                     messageCollector.stop();
                     buttonCollector.stop();
 
-                    interaction.followUp({
-                      content: `${member.displayName}: Sound **${sound.command}** added!`,
-                      ephemeral: true,
-                    });
+                    collected.reply(
+                      `${member.displayName}: Sound **${sound.command}** added!`
+                    );
                     collected
                       .delete()
                       .catch((e) =>
                         log.warn("could not delete sound file message")
                       );
-                  });
-
-                  interaction.followUp({
-                    content: `Please send me the audio file now in **FLAC** or **MP3** format.`,
-                    components: [
-                      new MessageActionRow().addComponents([
-                        new MessageButton()
-                          .setCustomId(`abort#${uid}`)
-                          .setLabel("Abort")
-                          .setStyle("SECONDARY"),
-                      ]),
-                    ],
-                    ephemeral: true,
                   });
                 }
                 break;
