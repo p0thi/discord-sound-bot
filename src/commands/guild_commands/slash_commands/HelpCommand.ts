@@ -1,5 +1,8 @@
 import { hyperlink } from "@discordjs/builders";
 import {
+  ApplicationCommand,
+  ApplicationCommandOption,
+  ApplicationCommandOptionType,
   CommandInteraction,
   EmbedField,
   Guild,
@@ -7,6 +10,7 @@ import {
   MessagePayload,
 } from "discord.js";
 import DatabaseManager from "../../../DatabaseManager";
+import { GroupPermissionKey } from "../../../db/interfaces/IGuild";
 import { GroupPermission, groupPermissions } from "../../../db/models/Guild";
 import ContextMenuCommandCreator, {
   ContextMenuCommandTemplate,
@@ -145,6 +149,37 @@ export default class HelpCommand
     } as SlashCommandTemplate;
   }
 
+  static commandToDecriptionLayer(
+    template: SlashCommandTemplate | ContextMenuCommandTemplate
+  ): LayerDescription {
+    const command = template.create();
+    const result: LayerDescription = {
+      name: command.name,
+      description: command.description,
+      type: "COMMAND",
+      permission: groupPermissions.get(template.permission),
+      options: command.options?.map(HelpCommand.optionToDescriptionLayer),
+    };
+    return result;
+  }
+
+  private static optionToDescriptionLayer(
+    option: ApplicationCommandOption
+  ): LayerDescription {
+    const result: LayerDescription = {
+      name: option.name,
+      description: option.description,
+      type: option.type,
+      required: option.required,
+    };
+    if (option.type === "SUB_COMMAND_GROUP" || option.type === "SUB_COMMAND") {
+      result.options = option.options?.map(
+        HelpCommand.optionToDescriptionLayer
+      );
+    }
+    return result;
+  }
+
   static templatesToFields(
     templates: (SlashCommandTemplate | ContextMenuCommandTemplate)[],
     prefix: string = ""
@@ -163,4 +198,13 @@ export default class HelpCommand
         } as EmbedField)
     );
   }
+}
+
+export interface LayerDescription {
+  name: string;
+  type: ApplicationCommandOptionType | "COMMAND";
+  permission?: GroupPermissionKey;
+  description: string;
+  required?: boolean;
+  options?: LayerDescription[];
 }

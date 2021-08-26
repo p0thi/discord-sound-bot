@@ -38,6 +38,12 @@ export default {
       }
     });
 
+    app.use((req, res, next) => {
+      req.bot = bot;
+      next();
+    });
+
+    app.use("/api/commands", require("./commands"));
     app.use("/api/auth", require("./auth"));
 
     app.use((req, res, next) => {
@@ -51,7 +57,6 @@ export default {
       }
 
       req.userId = verified.id;
-      req.bot = bot;
       next();
     });
 
