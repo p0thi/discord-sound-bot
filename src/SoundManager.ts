@@ -250,6 +250,7 @@ export default class SoundManager {
         })),
         withSelectMenu: true,
         fieldToUseForSelectValue: "name",
+        selectPlaceholder: "Select a command from above to play",
       })
     );
 

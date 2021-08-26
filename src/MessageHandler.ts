@@ -73,26 +73,32 @@ export default class MessageHandler {
       let args = msg.content.substr(prefix.length).split(" ");
       log.info(`commands detected: ${args[0]}`);
       switch (args[0]) {
-        case "commands": {
-          let dbGuild: IGuild = await dbManager.getGuild({
-            discordId: msg.guild.id,
-          });
-          let sounds: ISound[] = await dbManager.getAllGuildSounds(dbGuild);
+        case "commands":
+          {
+            let dbGuild: IGuild = await dbManager.getGuild({
+              discordId: msg.guild.id,
+            });
 
-          SoundManager.sendCommandsList(msg.channel, msg.channel, dbGuild);
-        }
-        case "random": {
-          deleter.add(msg, 2000);
-          let guild = await dbManager.getGuild({ discordId: msg.guild.id });
-          let sound = await dbManager.getRandomSoundForGuild(guild._id);
-
-          audioManager.memberPlaySound(
-            msg.member,
-            sound[0],
-            msg.member.voice.channel as VoiceChannel
-          );
+            SoundManager.sendCommandsList(msg.channel, msg.channel, dbGuild);
+          }
           break;
-        }
+        case "random":
+          {
+            deleter.add(msg, 2000);
+            let guild = await dbManager.getGuild({ discordId: msg.guild.id });
+            let sound = await dbManager.getRandomSoundForGuild(guild._id);
+
+            if (!sound) {
+              break;
+            }
+
+            audioManager.memberPlaySound(
+              msg.member,
+              sound[0],
+              msg.member.voice.channel as VoiceChannel
+            );
+          }
+          break;
         default:
           deleter.add(msg, 2000);
           let guild = await dbManager.getGuild({ discordId: msg.guild.id });
@@ -100,6 +106,11 @@ export default class MessageHandler {
             command: args[0],
             guild: guild,
           });
+
+          if (!sound) {
+            break;
+          }
+
           audioManager.memberPlaySound(
             msg.member,
             sound,

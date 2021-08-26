@@ -18,6 +18,7 @@ export class MultiPageMessageOfFieldsOptions {
   fieldToUseForSelectValue?: "name" | "value" = "value";
   maxSelectValueOfOne?: boolean = true;
   url?: string = undefined;
+  selectPlaceholder: string = "Select one option from above";
 
   constructor(init?: Partial<MultiPageMessageOfFieldsOptions>) {
     Object.assign(this, init);
@@ -119,7 +120,7 @@ export default class MultiPageMessage {
           new MessageSelectMenu()
             .setCustomId(`select#${uid}`)
             .setMaxValues(options.maxSelectValueOfOne ? 1 : pageChunk.length)
-            .setPlaceholder("Select one option from above")
+            .setPlaceholder(options.selectPlaceholder)
             .addOptions(
               pageChunk.map((f) => ({
                 label: f.name,
