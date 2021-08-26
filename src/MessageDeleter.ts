@@ -19,7 +19,14 @@ export default class MessageDeleter {
   add(msg: Message, delay?: number) {
     return setTimeout(
       () =>
-        msg.delete().catch((error) => logger.warn("Could not delete Message.")),
+        msg.delete().catch(() => {
+          logger.warn("Could not delete Message.");
+          if (msg.author.id === msg.client.user.id) {
+            msg.edit({ components: [] }).catch(() => {
+              logger.warn("Could not remove components from message");
+            });
+          }
+        }),
       delay || this.delay
     );
   }
