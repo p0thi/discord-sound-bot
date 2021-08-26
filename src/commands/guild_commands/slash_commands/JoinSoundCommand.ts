@@ -82,7 +82,7 @@ export default class JoinSoundCommand
               options: [
                 {
                   name: "command",
-                  description: "command of the sound",
+                  description: "Command of the sound",
                   required: true,
                   type: "STRING",
                 },

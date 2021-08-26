@@ -81,13 +81,13 @@ export default class SoundCommand
               options: [
                 {
                   name: "command",
-                  description: "command of the sound",
+                  description: "Command of the sound",
                   required: true,
                   type: "STRING",
                 },
                 {
                   name: "description",
-                  description: "description of the sound",
+                  description: "Description of the sound",
                   required: true,
                   type: "STRING",
                 },
@@ -100,7 +100,7 @@ export default class SoundCommand
               options: [
                 {
                   name: "command",
-                  description: "command of the sound",
+                  description: "Command of the sound",
                   required: true,
                   type: "STRING",
                 },
@@ -113,7 +113,7 @@ export default class SoundCommand
               options: [
                 {
                   name: "command",
-                  description: "command of the sound",
+                  description: "Command of the sound",
                   required: true,
                   type: "STRING",
                 },

@@ -60,7 +60,7 @@ router.get("/all", async (req, res) => {
   //   );
 
   const result: CommandsResponse = {
-    globalCommands: [
+    globalSlashCommands: [
       {
         name: "help",
         description: "Displays help message",
@@ -94,7 +94,7 @@ router.get("/all", async (req, res) => {
 module.exports = router;
 
 interface CommandsResponse {
-  globalCommands: LayerDescription[];
+  globalSlashCommands: LayerDescription[];
   slashCommands: LayerDescription[];
   contextMenuCommands: LayerDescription[];
 }

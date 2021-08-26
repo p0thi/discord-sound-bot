@@ -93,7 +93,7 @@ export default class PermissionGroupCommand
           options: [
             {
               name: "create",
-              description: "Add a sound to the bot",
+              description: "Create a permission group",
               type: "SUB_COMMAND",
               options: [
                 {

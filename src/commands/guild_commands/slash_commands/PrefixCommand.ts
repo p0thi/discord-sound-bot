@@ -95,7 +95,7 @@ export default class PrefixCommand
           options: [
             {
               name: "prefix",
-              description: "The new Prefix",
+              description: "The new server prefix",
               required: true,
               type: "STRING",
               choices: [

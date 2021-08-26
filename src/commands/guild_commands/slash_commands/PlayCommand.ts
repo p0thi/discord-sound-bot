@@ -82,7 +82,7 @@ export default class PlayCommand
               options: [
                 {
                   name: "name",
-                  description: "Name of the sound",
+                  description: "Command of the sound",
                   type: "STRING",
                   required: true,
                 },
