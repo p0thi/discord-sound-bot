@@ -4,6 +4,7 @@ import SlashCommandCreator from "../commands/SlashCommandCreator";
 import IGuild from "../db/interfaces/IGuild";
 import ACommandManager from "./ACommandManager";
 import ContextMenuCommandManager from "./ContextMenuCommandManager";
+import DatabaseGuildManager from "./DatabaseGuildManager";
 import DatabaseManager from "./DatabaseManager";
 import SlashCommandManager from "./SlashCommandManager";
 
@@ -21,6 +22,20 @@ export default class BotGuildManager {
       SlashCommandManager.getInstance(bot),
       ContextMenuCommandManager.getInstance(bot)
     );
+
+    dbManager
+      .getGuild({ discordId: guild.id })
+      .then(async (guildData: IGuild) => {
+        const manager = await new DatabaseGuildManager(
+          guildData
+        ).getSoundBoardManager(guild);
+
+        const setupDone = await manager?.setup();
+
+        if (setupDone) {
+          manager.updateMessages();
+        }
+      });
   }
 
   start(): void {

@@ -85,7 +85,7 @@ const guildSchema: Schema = new Schema(
       minLength: 1,
       default: "!",
     },
-    soudBoardChannel: { type: String, required: false },
+    soundBoardChannel: { type: String, required: false },
   },
   { timestamps: true }
 );

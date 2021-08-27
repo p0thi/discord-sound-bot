@@ -10,6 +10,7 @@ import BotGuildManager from "./managers/BotGuildManager";
 import ACommandManager from "./managers/ACommandManager";
 import DatabaseManager from "./managers/DatabaseManager";
 import JoinHandler from "./handlers/JoinHandler";
+import InteractionHandler from "./handlers/InteractionHandler";
 
 // process.on("unhandledRejection", (reason, p) => {
 //   console.log("Unhandled Rejection at: Promise", p, "reason:", reason);
@@ -37,6 +38,7 @@ const slashCommandManager = SlashCommandManager.getInstance(soundBot);
 const contextMenuCommandManager =
   ContextMenuCommandManager.getInstance(soundBot);
 const botGuildManager = new BotGuildManager(soundBot);
+const interactionHandler = new InteractionHandler(soundBot);
 
 soundBot.on("ready", async () => {
   const statusSetter = () => {
@@ -53,6 +55,7 @@ soundBot.on("ready", async () => {
 
   slashCommandManager.start();
   contextMenuCommandManager.start();
+  interactionHandler.start();
 
   // ACommandManager.setGuildCommands(
   //   slashCommandManager,

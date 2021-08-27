@@ -33,6 +33,7 @@ import JoinSoundCommand from "./guild_commands/slash_commands/JoinSoundCommand";
 import ContextMenuCommandCreator from "./ContextMenuCommandCreator";
 import PlayCommand from "./guild_commands/slash_commands/PlayCommand";
 import DatabaseManager from "../managers/DatabaseManager";
+import SoundBoardCommand from "./guild_commands/slash_commands/SoundBoardCommand";
 
 const dbManager = DatabaseManager.getInstance();
 const deleter = MessageDeleter.getInstance();
@@ -50,6 +51,7 @@ export default abstract class SlashCommandCreator {
       SoundCommand.getInstance(guild),
       JoinSoundCommand.getInstance(guild),
       PermissionGroupCommand.getInstance(guild),
+      SoundBoardCommand.getInstance(guild),
       PrefixCommand.getInstance(guild),
     ];
     return commands;

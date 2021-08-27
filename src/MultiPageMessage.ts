@@ -148,39 +148,34 @@ export default class MultiPageMessage {
       component.deferUpdate();
       const buttonId = component.customId.split("#")[0];
 
-      switch (buttonId) {
-        case "start":
-          {
-            options.channel.messages.fetch(component.message.id).then((m) => {
-              m.edit(createMessage(1));
-            });
-          }
-          break;
-        case "middle":
-          {
-            options.channel.messages.fetch(component.message.id).then((m) => {
-              m.edit(createMessage(Math.ceil(chunks.length / 2)));
-            });
-          }
-          break;
-        case "end":
-          {
-            options.channel.messages.fetch(component.message.id).then((m) => {
-              m.edit(createMessage(chunks.length));
-            });
-          }
-          break;
-        default: {
-          const nextPage = parseInt(buttonId);
-          if (isNaN(nextPage) || nextPage < 1 || nextPage > chunks.length) {
-            return;
-          }
+      options.channel.messages.fetch(component.message.id).then((message) => {
+        message.suppressEmbeds(false).catch();
+        switch (buttonId) {
+          case "start":
+            {
+              message.edit(createMessage(1));
+            }
+            break;
+          case "middle":
+            {
+              message.edit(createMessage(Math.ceil(chunks.length / 2)));
+            }
+            break;
+          case "end":
+            {
+              message.edit(createMessage(chunks.length));
+            }
+            break;
+          default: {
+            const nextPage = parseInt(buttonId);
+            if (isNaN(nextPage) || nextPage < 1 || nextPage > chunks.length) {
+              return;
+            }
 
-          options.channel.messages.fetch(component.message.id).then((m) => {
-            m.edit(createMessage(nextPage));
-          });
+            message.edit(createMessage(nextPage));
+          }
         }
-      }
+      });
     });
 
     return createMessage(1);

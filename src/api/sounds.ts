@@ -10,6 +10,7 @@ import AudioManager from "../managers/AudioManager";
 import DatabaseGuildManager from "../managers/DatabaseGuildManager";
 import DatabaseManager from "../managers/DatabaseManager";
 import SoundManager from "../managers/SoundManager";
+import IGuild from "../db/interfaces/IGuild";
 
 const authManager = new AuthManager();
 const dbManager = DatabaseManager.getInstance();
@@ -238,6 +239,7 @@ router.delete("/delete", async (req, res) => {
     .exec();
   const dbGuild = sound.guild;
   const botGuild = await req.bot.guilds.fetch(dbGuild.discordId);
+  const member = await botGuild.members.fetch(req.userId);
 
   // console.log('botGuild', botGuild.id)
   // console.log('dbGuild', dbGuild.discordId)
@@ -259,9 +261,12 @@ router.delete("/delete", async (req, res) => {
     return;
   }
 
+  const dbGuildManager = new DatabaseGuildManager(dbGuild);
+
   if (
     sound.creator.discordId !== req.userId &&
-    req.userId !== botGuild.ownerId
+    req.userId !== botGuild.ownerId &&
+    !(await dbGuildManager.canDeleteSound(member, sound))
   ) {
     _sendError(res, "Insufficient permissions", 403);
     return;
@@ -282,28 +287,46 @@ router.delete("/delete", async (req, res) => {
 });
 
 router.post("/joinsound", async (req, res) => {
-  // console.log(req.body);
-  // _sendError(res,"baum")
-  // return;
-  let guild;
+  let dbGuild: IGuild;
+
   if (!req.body.sound) {
     if (!req.body.guild) {
       _sendError(res, "Join sound could not be set or disabled.");
       return;
     }
 
-    guild = await dbManager.getGuild({ discordId: req.body.guild });
-    guild.joinSounds.delete(req.userId);
+    dbGuild = await dbManager.getGuild({ discordId: req.body.guild });
+    const member = await req.bot.guilds.cache
+      .get(req.body.guild)
+      .members.fetch(req.userId);
+
+    const dbGuildManager = new DatabaseGuildManager(dbGuild);
+
+    if (!(await dbGuildManager.canUseJoinSound(member))) {
+      _sendError(res, "Insufficient permissions");
+      return;
+    }
+
+    dbGuild.joinSounds.delete(req.userId);
   } else {
     const sound = await SoundModel.findOne({ _id: req.body.sound })
       .populate("guild")
       .exec();
-    guild = sound.guild;
-    guild.joinSounds.set(req.userId, sound._id);
+    dbGuild = sound.guild;
+    const member = await req.bot.guilds.cache
+      .get(dbGuild.discordId)
+      .members.fetch(req.userId);
+    const dbGuildManager = new DatabaseGuildManager(dbGuild);
+
+    if (!(await dbGuildManager.canUseJoinSound(member))) {
+      _sendError(res, "Insufficient permissions");
+      return;
+    }
+    dbGuild.joinSounds.set(req.userId, sound._id);
   }
 
   try {
-    await guild.save();
+    await dbGuild.save();
     res.status(200).send({
       status: "success",
       message: "Join sound changed successfully.",

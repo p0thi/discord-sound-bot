@@ -22,5 +22,5 @@ export default interface IGuild extends Document {
   permissionGroups: Types.DocumentArray<IPermissionGroup>;
   joinSounds: Types.Map<ObjectId>;
   commandPrefix: string;
-  soudBoardChannel: string;
+  soundBoardChannel: string;
 }

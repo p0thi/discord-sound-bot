@@ -16,8 +16,13 @@ import { GuildMember, Message, StageChannel, VoiceChannel } from "discord.js";
 import DatabaseGuildManager from "./DatabaseGuildManager";
 import ISound from "../db/interfaces/ISound";
 import log from "../log";
+import { RateLimiterMemory, RateLimiterRes } from "rate-limiter-flexible";
 
 const dbManager = DatabaseManager.getInstance();
+const rateLimiter = new RateLimiterMemory({
+  points: 2,
+  duration: 10,
+});
 
 export default class AudioManager {
   private static _guildAudioPlayers = new Map<string, AudioPlayer>();
@@ -34,12 +39,12 @@ export default class AudioManager {
     member: GuildMember,
     sound: ISound,
     channel: VoiceChannel | StageChannel
-  ) {
+  ): Promise<string | true> {
     const dbGuild = await dbManager.getGuild({ discordId: member.guild.id });
     const databaseGuildManager = new DatabaseGuildManager(dbGuild);
     if (!(await databaseGuildManager.canPlaySounds(member))) {
       log.info(`${member.displayName} cannot play sounds`);
-      return;
+      return "User can not play sounds";
     }
 
     if (
@@ -49,9 +54,23 @@ export default class AudioManager {
       !channel.speakable
     ) {
       log.info(`Bot cannot join or speak in ${channel}`);
-      return;
+      return "Bot can not join this channel";
     }
-    await this.play(sound, channel);
+    const result = await new Promise<true | string>((resolve, reject) => {
+      rateLimiter
+        .consume(`${member.id}#${channel.guild.id}`, 1)
+        .then((rateRes: RateLimiterRes) => {
+          this.play(sound, channel).then(() => resolve(true));
+        })
+        .catch((rateRes: RateLimiterRes) => {
+          resolve(
+            `Rate limit exceeded: Wait **${(
+              rateRes.msBeforeNext / 1000
+            ).toFixed(2)} seconds**`
+          );
+        });
+    });
+    return result;
   }
 
   private async play(sound: ISound, channel: VoiceChannel): Promise<void> {

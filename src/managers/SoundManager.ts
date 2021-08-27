@@ -33,6 +33,7 @@ import MessageDeleter from "../MessageDeleter";
 import MultiPageMessage, {
   MultiPageMessageOfFieldsOptions,
 } from "../MultiPageMessage";
+import SoundBoardManager from "./SoundBoardManager";
 
 const dbManager = DatabaseManager.getInstance();
 const prohibitedCommands = [
@@ -149,7 +150,7 @@ export default class SoundManager {
   async createSound(
     command: string,
     description: string,
-    guild: IGuild,
+    dbGuild: IGuild,
     creator: IUser
   ) {
     if (!this.soundFile) {
@@ -161,9 +162,10 @@ export default class SoundManager {
         command,
         description,
         file: this.soundFile,
-        guild,
+        guild: dbGuild,
         creator,
       });
+      SoundBoardManager.getInstance(dbGuild.discordId)?.updateMessages();
       return sound;
     } catch (e) {
       log.error(e);
@@ -210,8 +212,15 @@ export default class SoundManager {
 
   static async deleteSound(sound: ISound) {
     try {
+      console.log("guild", sound.guild);
+      // const guildId =
+      const dbGuild = await dbManager.getGuild({
+        _id: sound.guild._id.toString(),
+      });
       await dbManager.unlinkFile(sound.file);
-      await sound.delete();
+      sound.delete((err, res) => {
+        SoundBoardManager.getInstance(dbGuild.discordId)?.updateMessages();
+      });
     } catch (e) {
       log.error(e);
       throw e;

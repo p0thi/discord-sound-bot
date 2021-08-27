@@ -1,4 +1,4 @@
-import { GuildMember } from "discord.js";
+import { Guild, GuildMember, TextChannel } from "discord.js";
 import IGuild, {
   GroupPermissionKey,
   IPermissionGroup,
@@ -13,6 +13,7 @@ import {
 import SoundModel from "../db/models/Sound";
 import log from "../log";
 import DatabaseManager from "./DatabaseManager";
+import SoundBoardManager from "./SoundBoardManager";
 
 const dbManager = DatabaseManager.getInstance();
 
@@ -207,5 +208,31 @@ export default class DatabaseGuildManager {
       }
     }
     return Math.min(this.dbGuild.maxSoundDuration, result);
+  }
+
+  async getSoundBoardManager(
+    guild: Guild
+  ): Promise<SoundBoardManager | undefined> {
+    if (!this.dbGuild.soundBoardChannel) {
+      return;
+    }
+    let soundBoardManager = SoundBoardManager.getInstance(guild.id);
+
+    if (
+      soundBoardManager &&
+      SoundBoardManager.checkChannelPermissions(soundBoardManager.channel)
+    ) {
+      return soundBoardManager;
+    }
+    const channel = await guild.channels.fetch(this.dbGuild.soundBoardChannel);
+    if (!(channel instanceof TextChannel)) {
+      return;
+    }
+
+    soundBoardManager = new SoundBoardManager(channel);
+    if (SoundBoardManager.checkChannelPermissions(soundBoardManager.channel)) {
+      return soundBoardManager;
+    }
+    return;
   }
 }
