@@ -167,7 +167,21 @@ export default class SoundBoardManager {
         components: rows,
       };
       if (messages.length > i) {
-        messages[i].edit(messageOptions);
+        outer_loop: for (const [
+          x,
+          row,
+        ] of messageOptions.components.entries()) {
+          for (const [y, component] of row.components.entries()) {
+            if (
+              (component as MessageButton).customId !==
+              (messages[i].components[x].components[y] as MessageButton)
+                .customId
+            ) {
+              messages[i].edit(messageOptions);
+              break outer_loop;
+            }
+          }
+        }
       } else {
         this.channel.send(messageOptions);
       }

@@ -8,6 +8,7 @@ import {
   MessageOptions,
 } from "discord.js";
 import { v1 as uuid } from "uuid";
+import log from "./log";
 
 export class MultiPageMessageOfFieldsOptions {
   channel: TextBasedChannels;
@@ -148,34 +149,39 @@ export default class MultiPageMessage {
       component.deferUpdate();
       const buttonId = component.customId.split("#")[0];
 
-      options.channel.messages.fetch(component.message.id).then((message) => {
-        message.suppressEmbeds(false).catch();
-        switch (buttonId) {
-          case "start":
-            {
-              message.edit(createMessage(1));
-            }
-            break;
-          case "middle":
-            {
-              message.edit(createMessage(Math.ceil(chunks.length / 2)));
-            }
-            break;
-          case "end":
-            {
-              message.edit(createMessage(chunks.length));
-            }
-            break;
-          default: {
-            const nextPage = parseInt(buttonId);
-            if (isNaN(nextPage) || nextPage < 1 || nextPage > chunks.length) {
-              return;
-            }
+      options.channel.messages
+        .fetch(component.message.id)
+        .then((message) => {
+          message.suppressEmbeds(false).catch();
+          switch (buttonId) {
+            case "start":
+              {
+                message.edit(createMessage(1));
+              }
+              break;
+            case "middle":
+              {
+                message.edit(createMessage(Math.ceil(chunks.length / 2)));
+              }
+              break;
+            case "end":
+              {
+                message.edit(createMessage(chunks.length));
+              }
+              break;
+            default: {
+              const nextPage = parseInt(buttonId);
+              if (isNaN(nextPage) || nextPage < 1 || nextPage > chunks.length) {
+                return;
+              }
 
-            message.edit(createMessage(nextPage));
+              message.edit(createMessage(nextPage));
+            }
           }
-        }
-      });
+        })
+        .catch((e) => {
+          log.error("Unknown message");
+        });
     });
 
     return createMessage(1);

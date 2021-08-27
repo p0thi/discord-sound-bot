@@ -34,6 +34,7 @@ import MultiPageMessage, {
   MultiPageMessageOfFieldsOptions,
 } from "../MultiPageMessage";
 import SoundBoardManager from "./SoundBoardManager";
+import { APIMessage } from "discord-api-types";
 
 const dbManager = DatabaseManager.getInstance();
 const prohibitedCommands = [
@@ -265,41 +266,45 @@ export default class SoundManager {
 
     MessagePayload.create(target, messageOptions);
 
-    let message;
-    if (target instanceof Interaction) {
-      message = await target.followUp(messageOptions);
-    } else {
-      message = await target.send(messageOptions);
-    }
-
-    deleter.add(message, 550000);
-    const collector = message.createMessageComponentCollector({
-      componentType: "SELECT_MENU",
-      time: 600000,
-    });
-    collector.on("collect", async (component: SelectMenuInteraction) => {
-      component.deferUpdate();
-      const member = component.member as GuildMember;
-      const command = component.values[0].match(dbGuild.commandPrefix)
-        ? component.values[0].replace(dbGuild.commandPrefix, "")
-        : component.values[0];
-      const sound = await dbManager.getSound({
-        guild: dbGuild,
-        command,
-      });
-      if (!sound) {
-        component.followUp({
-          content: "That sound doesn't exist",
-          ephemeral: true,
-        });
-        return;
+    try {
+      let message: Message;
+      if (target instanceof Interaction) {
+        message = (await target.followUp(messageOptions)) as Message;
+      } else {
+        message = await target.send(messageOptions);
       }
-      new AudioManager().memberPlaySound(
-        member,
-        sound,
-        member.voice.channel as VoiceChannel
-      );
-    });
+
+      deleter.add(message, 550000);
+      const collector = message.createMessageComponentCollector({
+        componentType: "SELECT_MENU",
+        time: 600000,
+      });
+      collector?.on("collect", async (component: SelectMenuInteraction) => {
+        component.deferUpdate();
+        const member = component.member as GuildMember;
+        const command = component.values[0].match(dbGuild.commandPrefix)
+          ? component.values[0].replace(dbGuild.commandPrefix, "")
+          : component.values[0];
+        const sound = await dbManager.getSound({
+          guild: dbGuild,
+          command,
+        });
+        if (!sound) {
+          component.followUp({
+            content: "That sound doesn't exist",
+            ephemeral: true,
+          });
+          return;
+        }
+        new AudioManager().memberPlaySound(
+          member,
+          sound,
+          member.voice.channel as VoiceChannel
+        );
+      });
+    } catch (e) {
+      log.error(e);
+    }
   }
 }
 
