@@ -125,11 +125,16 @@ export default class DatabaseGuildManager {
     return this.dbGuild.bannedUsers.includes(dbUser.id);
   }
 
-  private isAdminOrOwner(member: GuildMember): boolean {
-    return (
-      member.permissions.has("ADMINISTRATOR") ||
-      member.guild.ownerId === member.id
-    );
+  isAdminOrOwner(member: GuildMember): boolean {
+    return this.isAdmin(member) || this.isOwner(member);
+  }
+
+  isAdmin(member: GuildMember): boolean {
+    return member.permissions.has("ADMINISTRATOR");
+  }
+
+  isOwner(member: GuildMember): boolean {
+    return member.guild.ownerId === member.id;
   }
 
   async maxGuildSoundsReached(): Promise<boolean> {
@@ -189,6 +194,9 @@ export default class DatabaseGuildManager {
   }
 
   getMaxSoundsPerUser(member: GuildMember): number {
+    if (this.isOwner(member)) {
+      return this.dbGuild.maxSounds;
+    }
     let result = 0;
 
     for (const group of this.getMemberPermissionGroups(member)) {
@@ -200,6 +208,9 @@ export default class DatabaseGuildManager {
   }
 
   getMaxSoundDurationForMember(member: GuildMember): number {
+    if (this.isOwner(member)) {
+      return this.dbGuild.maxSoundDuration;
+    }
     let result = this.dbGuild.maxSoundDuration;
 
     for (const group of this.getMemberPermissionGroups(member)) {
