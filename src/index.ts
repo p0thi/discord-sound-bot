@@ -1,15 +1,15 @@
 // https://discord.com/oauth2/authorize?client_id=234278013225795585&scope=bot&permissions=36830272
 require("dotenv").config();
-import MessageHandler from "./MessageHandler";
-import JoinHandler from "./JoinHandler";
+import MessageHandler from "./handlers/MessageHandler";
 import expressServer from "./api/express-server";
-import DatabaseManager from "./DatabaseManager";
 import Discord, { Intents } from "discord.js";
 import log from "./log";
 import ContextMenuCommandManager from "./managers/ContextMenuCommandManager";
 import SlashCommandManager from "./managers/SlashCommandManager";
 import BotGuildManager from "./managers/BotGuildManager";
 import ACommandManager from "./managers/ACommandManager";
+import DatabaseManager from "./managers/DatabaseManager";
+import JoinHandler from "./handlers/JoinHandler";
 
 // process.on("unhandledRejection", (reason, p) => {
 //   console.log("Unhandled Rejection at: Promise", p, "reason:", reason);

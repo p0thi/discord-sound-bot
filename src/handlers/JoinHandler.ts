@@ -1,8 +1,8 @@
-import DatabaseManager from "./DatabaseManager";
-import AudioManager from "./AudioManager";
-import log from "./log";
 import { Client, StageChannel, VoiceState } from "discord.js";
-import DatabaseGuildManager from "./DatabaseGuildManager";
+import log from "../log";
+import AudioManager from "../managers/AudioManager";
+import DatabaseGuildManager from "../managers/DatabaseGuildManager";
+import DatabaseManager from "../managers/DatabaseManager";
 
 const dbManager = DatabaseManager.getInstance();
 const audioManager = new AudioManager();

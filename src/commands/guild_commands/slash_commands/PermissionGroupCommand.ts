@@ -6,8 +6,6 @@ import {
   MessageOptions,
   MessagePayload,
 } from "discord.js";
-import DatabaseGuildManager from "../../../DatabaseGuildManager";
-import DatabaseManager from "../../../DatabaseManager";
 import {
   GroupPermission,
   groupPermissions,
@@ -21,6 +19,8 @@ import IPermissionChangeObserver from "../IPermissionChangeObserver";
 import log from "../../../log";
 import { GroupPermissionKey } from "../../../db/interfaces/IGuild";
 import { codeBlock, roleMention } from "@discordjs/builders";
+import DatabaseGuildManager from "../../../managers/DatabaseGuildManager";
+import DatabaseManager from "../../../managers/DatabaseManager";
 
 const dbManager = DatabaseManager.getInstance();
 

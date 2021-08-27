@@ -4,9 +4,9 @@ import btoa from "btoa";
 import fetch from "node-fetch";
 import jwt from "jsonwebtoken";
 import moment from "moment";
-import DatabaseManager from "../DatabaseManager";
 import AuthManager from "./managers/AuthManager";
 import log from "../log";
+import DatabaseManager from "../managers/DatabaseManager";
 // import html from "./callback.html";
 
 const dbManager = DatabaseManager.getInstance();

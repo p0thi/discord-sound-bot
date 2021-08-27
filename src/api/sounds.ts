@@ -1,15 +1,15 @@
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
-import DatabaseManager from "../DatabaseManager";
 import AuthManager from "./managers/AuthManager";
-import AudioManager from "../AudioManager";
-import SoundManager from "../SoundManager";
 import fileUpload, { UploadedFile } from "express-fileupload";
 import log from "../log";
 import { _sendError } from "./utils";
 import SoundModel from "../db/models/Sound";
 import { StageChannel } from "discord.js";
-import DatabaseGuildManager from "../DatabaseGuildManager";
+import AudioManager from "../managers/AudioManager";
+import DatabaseGuildManager from "../managers/DatabaseGuildManager";
+import DatabaseManager from "../managers/DatabaseManager";
+import SoundManager from "../managers/SoundManager";
 
 const authManager = new AuthManager();
 const dbManager = DatabaseManager.getInstance();

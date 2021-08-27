@@ -1,8 +1,8 @@
 import { Router } from "express";
 import fetch from "node-fetch";
-import DatabaseManager from "../DatabaseManager";
 import AuthManager from "./managers/AuthManager";
 import log from "../log";
+import DatabaseManager from "../managers/DatabaseManager";
 
 const authManager = new AuthManager();
 const dbManager = DatabaseManager.getInstance();

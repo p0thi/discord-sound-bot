@@ -8,10 +8,7 @@ import {
   MessageAttachment,
   MessageButton,
 } from "discord.js";
-import DatabaseGuildManager from "../../../DatabaseGuildManager";
-import DatabaseManager from "../../../DatabaseManager";
 import { GroupPermission } from "../../../db/models/Guild";
-import SoundManager from "../../../SoundManager";
 import CustomApplicationCommand from "../../CustomApplicationCommand";
 import { SlashCommandTemplate } from "../../SlashCommandCreator";
 import AObservableCommand from "../AObservableCommand";
@@ -21,6 +18,9 @@ import request from "http-async";
 import IPermissionChangeObserver from "../IPermissionChangeObserver";
 import log from "../../../log";
 import { hyperlink } from "@discordjs/builders";
+import DatabaseGuildManager from "../../../managers/DatabaseGuildManager";
+import DatabaseManager from "../../../managers/DatabaseManager";
+import SoundManager from "../../../managers/SoundManager";
 
 const dbManager = DatabaseManager.getInstance();
 

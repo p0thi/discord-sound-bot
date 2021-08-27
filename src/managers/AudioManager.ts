@@ -12,10 +12,10 @@ import {
   entersState,
 } from "@discordjs/voice";
 
-import log from "./log";
-import ISound from "./db/interfaces/ISound";
 import { GuildMember, Message, StageChannel, VoiceChannel } from "discord.js";
 import DatabaseGuildManager from "./DatabaseGuildManager";
+import ISound from "../db/interfaces/ISound";
+import log from "../log";
 
 const dbManager = DatabaseManager.getInstance();
 

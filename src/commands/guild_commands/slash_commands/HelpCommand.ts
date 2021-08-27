@@ -9,9 +9,9 @@ import {
   MessageOptions,
   MessagePayload,
 } from "discord.js";
-import DatabaseManager from "../../../DatabaseManager";
 import { GroupPermissionKey } from "../../../db/interfaces/IGuild";
 import { GroupPermission, groupPermissions } from "../../../db/models/Guild";
+import DatabaseManager from "../../../managers/DatabaseManager";
 import ContextMenuCommandCreator, {
   ContextMenuCommandTemplate,
 } from "../../ContextMenuCommandCreator";

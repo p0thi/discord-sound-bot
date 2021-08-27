@@ -1,7 +1,4 @@
-import DatabaseManager from "./DatabaseManager";
-import AudioManager from "./AudioManager";
-import MessageDeleter from "./MessageDeleter";
-import SoundManager from "./SoundManager";
+import MessageDeleter from "../MessageDeleter";
 import {
   MessageEmbed,
   MessageAttachment,
@@ -16,23 +13,26 @@ import {
   MessageSelectMenu,
   GuildMember,
 } from "discord.js";
-import Conversation, { Action, QuestionInteractionType } from "./Conversation";
+import Conversation, { Action, QuestionInteractionType } from "../Conversation";
 import fs from "fs";
 import request from "http-async";
 import path from "path";
 import util from "util";
-import log from "./log";
-import Sound from "./db/models/Sound";
-import SoundModel from "./db/models/Sound";
-import IGuild from "./db/interfaces/IGuild";
-import ISound from "./db/interfaces/ISound";
+import log from "../log";
+import Sound from "../db/models/Sound";
+import SoundModel from "../db/models/Sound";
+import IGuild from "../db/interfaces/IGuild";
+import ISound from "../db/interfaces/ISound";
 import { MongooseGridFSFileModel } from "mongoose-gridfs";
 import { MembershipStates } from "discord.js/typings/enums";
-import DatabaseGuildManager from "./DatabaseGuildManager";
-import { GroupPermission } from "./db/models/Guild";
+import { GroupPermission } from "../db/models/Guild";
 import MultiPageMessage, {
   MultiPageMessageOfFieldsOptions,
-} from "./MultiPageMessage";
+} from "../MultiPageMessage";
+import AudioManager from "../managers/AudioManager";
+import DatabaseManager from "../managers/DatabaseManager";
+import SoundManager from "../managers/SoundManager";
+import DatabaseGuildManager from "../managers/DatabaseGuildManager";
 
 const dbManager = DatabaseManager.getInstance();
 const audioManager = new AudioManager();

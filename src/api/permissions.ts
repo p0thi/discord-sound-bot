@@ -1,6 +1,5 @@
 import express from "express";
 import fetch from "node-fetch";
-import DatabaseManager from "../DatabaseManager";
 import AuthManager from "./managers/AuthManager";
 import { _sendError } from "./utils";
 import log from "../log";
@@ -10,10 +9,11 @@ import GuildModel, {
   defaultGroupName,
   reverseGroupPermissions,
 } from "../db/models/Guild";
-import DatabaseGuildManager from "../DatabaseGuildManager";
 import logger from "../log";
 import SlashCommandManager from "../managers/SlashCommandManager";
 import ContextMenuCommandManager from "../managers/ContextMenuCommandManager";
+import DatabaseGuildManager from "../managers/DatabaseGuildManager";
+import DatabaseManager from "../managers/DatabaseManager";
 
 const authManager = new AuthManager();
 const dbManager = DatabaseManager.getInstance();

@@ -1,6 +1,5 @@
 import express from "express";
 import fetch from "node-fetch";
-import DatabaseManager from "../DatabaseManager";
 import AuthManager from "./managers/AuthManager";
 import { _sendError } from "./utils";
 import log from "../log";
@@ -14,7 +13,6 @@ import GuildModel, {
   defaultMaxSounds,
   groupPermissions,
 } from "../db/models/Guild";
-import DatabaseGuildManager from "../DatabaseGuildManager";
 import SlashCommandCreator from "../commands/SlashCommandCreator";
 import ContextMenuCommandCreator from "../commands/ContextMenuCommandCreator";
 import HelpCommand, {
@@ -23,6 +21,7 @@ import HelpCommand, {
 import IGuildSlashCommand, {
   IGuildContextMenuCommand,
 } from "../commands/guild_commands/IGuildCommand";
+import DatabaseManager from "../managers/DatabaseManager";
 
 const authManager = new AuthManager();
 const dbManager = DatabaseManager.getInstance();

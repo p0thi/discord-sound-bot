@@ -20,9 +20,9 @@ import Discord, {
 import ISound from "./db/interfaces/ISound.js";
 import { v1 as uuid } from "uuid";
 import { create } from "domain";
-import DatabaseManager from "./DatabaseManager.js";
 import log from "./log";
 import logger from "./log";
+import DatabaseManager from "./managers/DatabaseManager.js";
 
 const confirmRegex = /^(ja|j|yes|y)$/i;
 const denyRegex = /^(nein|n|no|cancel|abbrechen|abbruch)$/i;

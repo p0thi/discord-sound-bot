@@ -1,18 +1,18 @@
 import { GuildMember } from "discord.js";
-import DatabaseManager from "./DatabaseManager";
 import IGuild, {
   GroupPermissionKey,
   IPermissionGroup,
-} from "./db/interfaces/IGuild";
-import ISound from "./db/interfaces/ISound";
-import IUser from "./db/interfaces/IUser";
+} from "../db/interfaces/IGuild";
+import ISound from "../db/interfaces/ISound";
+import IUser from "../db/interfaces/IUser";
 import {
   groupPermissions,
   GroupPermission,
   reverseGroupPermissions,
-} from "./db/models/Guild";
-import SoundModel from "./db/models/Sound";
-import log from "./log";
+} from "../db/models/Guild";
+import SoundModel from "../db/models/Sound";
+import log from "../log";
+import DatabaseManager from "./DatabaseManager";
 
 const dbManager = DatabaseManager.getInstance();
 

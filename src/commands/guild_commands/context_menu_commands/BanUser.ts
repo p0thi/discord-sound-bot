@@ -7,9 +7,9 @@ import {
   MessageEmbed,
   InteractionReplyOptions,
 } from "discord.js";
-import DatabaseGuildManager from "../../../DatabaseGuildManager";
-import DatabaseManager from "../../../DatabaseManager";
 import { GroupPermission } from "../../../db/models/Guild";
+import DatabaseGuildManager from "../../../managers/DatabaseGuildManager";
+import DatabaseManager from "../../../managers/DatabaseManager";
 
 import CustomApplicationCommand from "../../CustomApplicationCommand";
 import { SlashCommandTemplate } from "../../SlashCommandCreator";

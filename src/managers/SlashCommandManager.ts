@@ -17,9 +17,6 @@ import SlashCommandCreator, {
 import log from "../log";
 import ACommandManager from "./ACommandManager";
 import CustomApplicationCommand from "../commands/CustomApplicationCommand";
-import DatabaseGuildManager from "../DatabaseGuildManager";
-import SoundManager from "../SoundManager";
-import DatabaseManager from "../DatabaseManager";
 import { SlashCommandBuilder } from "@discordjs/builders";
 import { ApplicationCommandTypes } from "discord.js/typings/enums";
 

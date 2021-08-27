@@ -1,8 +1,8 @@
 import jwt from "jsonwebtoken";
-import DatabaseManager from "../../DatabaseManager";
 import moment from "moment";
 import fetch from "node-fetch";
 import log from "../../log";
+import DatabaseManager from "../../managers/DatabaseManager";
 
 const dbManager = DatabaseManager.getInstance();
 

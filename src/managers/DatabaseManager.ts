@@ -1,18 +1,18 @@
 import { connect, FilterQuery, Mongoose, ObjectId } from "mongoose";
 
-import Guild from "./db/models/Guild";
-import User from "./db/models/User";
-import Sound from "./db/models/Sound";
-import log from "./log";
 import {
   createModel,
   MongooseGridFS,
   MongooseGridFSFileModel,
 } from "mongoose-gridfs";
-import IGuild from "./db/interfaces/IGuild";
-import IUser from "./db/interfaces/IUser";
-import ISound from "./db/interfaces/ISound";
-import IAudioFile from "./db/interfaces/IAudioFile";
+import IAudioFile from "../db/interfaces/IAudioFile";
+import IGuild from "../db/interfaces/IGuild";
+import ISound from "../db/interfaces/ISound";
+import IUser from "../db/interfaces/IUser";
+import Guild from "../db/models/Guild";
+import Sound from "../db/models/Sound";
+import User from "../db/models/User";
+import log from "../log";
 
 export default class DatabaseManager {
   private static _instances: DatabaseManager;

@@ -1,6 +1,5 @@
 import express from "express";
 import fetch from "node-fetch";
-import DatabaseManager from "../DatabaseManager";
 import AuthManager from "./managers/AuthManager";
 import { _sendError } from "./utils";
 import log from "../log";
@@ -14,7 +13,8 @@ import GuildModel, {
   defaultMaxSounds,
   groupPermissions,
 } from "../db/models/Guild";
-import DatabaseGuildManager from "../DatabaseGuildManager";
+import DatabaseGuildManager from "../managers/DatabaseGuildManager";
+import DatabaseManager from "../managers/DatabaseManager";
 
 const authManager = new AuthManager();
 const dbManager = DatabaseManager.getInstance();

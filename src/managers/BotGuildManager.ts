@@ -1,10 +1,10 @@
 import { Client, Guild } from "discord.js";
 import ContextMenuCommandCreator from "../commands/ContextMenuCommandCreator";
 import SlashCommandCreator from "../commands/SlashCommandCreator";
-import DatabaseManager from "../DatabaseManager";
 import IGuild from "../db/interfaces/IGuild";
 import ACommandManager from "./ACommandManager";
 import ContextMenuCommandManager from "./ContextMenuCommandManager";
+import DatabaseManager from "./DatabaseManager";
 import SlashCommandManager from "./SlashCommandManager";
 
 const dbManager = DatabaseManager.getInstance();

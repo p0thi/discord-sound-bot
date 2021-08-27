@@ -11,8 +11,8 @@ import {
   Snowflake,
 } from "discord.js";
 import { RawApplicationCommandData } from "discord.js/typings/rawDataTypes";
-import DatabaseManager from "../DatabaseManager";
 import { GroupPermission, groupPermissions } from "../db/models/Guild";
+import DatabaseManager from "../managers/DatabaseManager";
 
 export default class CustomApplicationCommand extends ApplicationCommand {
   handler: (

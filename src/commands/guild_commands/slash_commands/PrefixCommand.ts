@@ -11,14 +11,11 @@ import {
   SelectMenuInteraction,
   VoiceChannel,
 } from "discord.js";
-import DatabaseGuildManager from "../../../DatabaseGuildManager";
-import DatabaseManager from "../../../DatabaseManager";
 import {
   GroupPermission,
   groupPermissions,
   reverseGroupPermissions,
 } from "../../../db/models/Guild";
-import SoundManager from "../../../SoundManager";
 import CustomApplicationCommand from "../../CustomApplicationCommand";
 import { SlashCommandTemplate } from "../../SlashCommandCreator";
 import AObservableCommand from "../AObservableCommand";
@@ -31,7 +28,8 @@ import { GroupPermissionKey } from "../../../db/interfaces/IGuild";
 import Conversation from "../../../Conversation";
 import MessageDeleter from "../../../MessageDeleter";
 import { codeBlock } from "@discordjs/builders";
-import AudioManager from "../../../AudioManager";
+import DatabaseGuildManager from "../../../managers/DatabaseGuildManager";
+import DatabaseManager from "../../../managers/DatabaseManager";
 
 const dbManager = DatabaseManager.getInstance();
 const deleter = MessageDeleter.getInstance();

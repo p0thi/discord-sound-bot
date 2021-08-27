@@ -7,10 +7,6 @@ import {
   MongooseGridFS,
   MongooseGridFSFileModel,
 } from "mongoose-gridfs";
-import SoundModel from "./db/models/Sound";
-import IUser from "./db/interfaces/IUser";
-import IGuild from "./db/interfaces/IGuild";
-import ISound from "./db/interfaces/ISound";
 import DatabaseGuildManager from "./DatabaseGuildManager";
 import {
   CommandInteraction,
@@ -26,13 +22,17 @@ import {
   TextChannel,
   VoiceChannel,
 } from "discord.js";
-import log from "./log";
 import { hyperlink } from "@discordjs/builders";
 import AudioManager from "./AudioManager";
+import log from "../log";
+import IGuild from "../db/interfaces/IGuild";
+import ISound from "../db/interfaces/ISound";
+import IUser from "../db/interfaces/IUser";
+import SoundModel from "../db/models/Sound";
+import MessageDeleter from "../MessageDeleter";
 import MultiPageMessage, {
   MultiPageMessageOfFieldsOptions,
-} from "./MultiPageMessage";
-import MessageDeleter from "./MessageDeleter";
+} from "../MultiPageMessage";
 
 const dbManager = DatabaseManager.getInstance();
 const prohibitedCommands = [
