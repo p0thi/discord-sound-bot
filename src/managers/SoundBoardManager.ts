@@ -104,7 +104,8 @@ export default class SoundBoardManager {
         new MessageActionRow().addComponents(
           chunk.map((c) => {
             const label =
-              c.command + "\xa0".repeat(Math.max(16 - c.command.length, 0));
+              c.command +
+              "\xa0".repeat(Math.floor(Math.max(16 - c.command.length, 0) * 2));
             return new MessageButton()
               .setLabel(label)
               .setStyle("SECONDARY")
@@ -136,32 +137,30 @@ export default class SoundBoardManager {
         rows[rows.length - 1].components[
           rows[rows.length - 1].components.length - 1
         ].customId.split("#")[0];
+      const previousLastCommand =
+        i > 0 ? rowChunks[i - 1][0].components[0].customId.split("#")[0] : null;
+      const nextFirstCommand =
+        i < rowChunks.length - 1
+          ? rowChunks[i + 1][0].components[0].customId.split("#")[0]
+          : null;
 
-      let lastMatchingIndex = -1;
-      if (firstCommand !== lastCommand) {
-        let matchingCharacters = "";
-        for (const [index, char] of firstCommand
-          .toUpperCase()
-          .split("")
-          .entries()) {
-          if (lastCommand.length <= index) {
-            break;
-          }
-          if (char === lastCommand.toUpperCase().split("")[index]) {
-            lastMatchingIndex = index;
-            matchingCharacters += char;
-          } else {
-            break;
-          }
-        }
-        const firstNav =
-          matchingCharacters +
-          (firstCommand[lastMatchingIndex + 1]?.toUpperCase() || "");
-        const lastNav =
-          matchingCharacters +
-          (lastCommand[lastMatchingIndex + 1]?.toUpperCase() || "");
-        nav += ` (${firstNav} - ${lastNav})`;
-      }
+      const firstMutual = this.getMutualCoherentString(
+        previousLastCommand?.toUpperCase(),
+        firstCommand.toUpperCase()
+      );
+      const lastMutual = this.getMutualCoherentString(
+        lastCommand.toUpperCase(),
+        nextFirstCommand?.toUpperCase()
+      );
+      const firstNav =
+        !!previousLastCommand && firstCommand !== lastCommand
+          ? firstMutual + firstCommand.charAt(firstMutual.length).toUpperCase()
+          : firstCommand.toUpperCase();
+      const lastNav = !!nextFirstCommand
+        ? lastMutual + lastCommand.charAt(lastMutual.length).toUpperCase()
+        : lastCommand.toUpperCase();
+      nav +=
+        firstNav === lastNav ? ` (${firstNav})` : ` (${firstNav} - ${lastNav})`;
       const messageOptions: MessageOptions = {
         content: nav,
         components: rows,
@@ -174,8 +173,9 @@ export default class SoundBoardManager {
           for (const [y, component] of row.components.entries()) {
             if (
               (component as MessageButton).customId !==
-              (messages[i].components[x].components[y] as MessageButton)
-                .customId
+                (messages[i].components[x].components[y] as MessageButton)
+                  .customId ||
+              messageOptions.content !== messages[i].content
             ) {
               messages[i].edit(messageOptions);
               break outer_loop;
@@ -190,6 +190,23 @@ export default class SoundBoardManager {
     for (let i = rowChunks.length; i < messages.length; i++) {
       messages[i].delete().catch(() => {});
     }
+  }
+
+  getMutualCoherentString(a: string, b: string): string {
+    if (!a || a.length === 0 || !b || b.length === 0) {
+      return "";
+    }
+    const aChars = a.split("");
+    const bChars = b.split("");
+    let result = "";
+    for (const [x, aChar] of aChars.entries()) {
+      if (bChars[x] === aChar) {
+        result += aChar;
+      } else {
+        break;
+      }
+    }
+    return result;
   }
 
   async getBotMessages(): Promise<Message[]> {
