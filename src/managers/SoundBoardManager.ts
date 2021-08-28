@@ -112,9 +112,10 @@ export default class SoundBoardManager {
       rows.push(
         new MessageActionRow().addComponents(
           chunk.map((c) => {
-            const label =
-              c.command +
-              " ".repeat(Math.floor(Math.max(16 - c.command.length, 0) * 1.8));
+            const spacer = " ".repeat(
+              Math.floor(Math.max(16 - c.command.length, 0) * 1.5)
+            );
+            const label = spacer + c.command + spacer;
             return new MessageButton()
               .setLabel(label)
               .setStyle("SECONDARY")
