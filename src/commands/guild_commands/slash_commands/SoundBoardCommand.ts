@@ -140,6 +140,15 @@ export default class SoundBoardCommand
                     return;
                   }
 
+                  if (!SoundBoardManager.checkChananelAge(channel)) {
+                    interaction.followUp({
+                      content:
+                        "This channel is too old to be used as a sound board. It has to be younger than **two weeks**.",
+                      ephemeral: true,
+                    });
+                    return;
+                  }
+
                   const uid = uuid();
 
                   channel

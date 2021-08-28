@@ -71,6 +71,15 @@ export default class SoundBoardManager {
     return permissions;
   }
 
+  static checkChananelAge(channel: TextChannel): boolean {
+    const youngerThan2Weeks =
+      new Date().getTime() - channel.createdAt.getTime() < 1209600000;
+    if (!youngerThan2Weeks) {
+      log.error("Soundboard channel was not created in the last 2 weeks");
+    }
+    return youngerThan2Weeks;
+  }
+
   async updateMessages() {
     log.debug("Updating soundboard messages");
     const messages = (await this.getBotMessages()).sort(
@@ -105,7 +114,7 @@ export default class SoundBoardManager {
           chunk.map((c) => {
             const label =
               c.command +
-              "\xa0".repeat(Math.floor(Math.max(16 - c.command.length, 0) * 2));
+              " ".repeat(Math.floor(Math.max(16 - c.command.length, 0) * 1.8));
             return new MessageButton()
               .setLabel(label)
               .setStyle("SECONDARY")
@@ -138,7 +147,12 @@ export default class SoundBoardManager {
           rows[rows.length - 1].components.length - 1
         ].customId.split("#")[0];
       const previousLastCommand =
-        i > 0 ? rowChunks[i - 1][0].components[0].customId.split("#")[0] : null;
+        i > 0
+          ? rowChunks[i - 1][rowChunks[i - 1].length - 1].components[
+              rowChunks[i - 1][rowChunks[i - 1].length - 1].components.length -
+                1
+            ].customId.split("#")[0]
+          : null;
       const nextFirstCommand =
         i < rowChunks.length - 1
           ? rowChunks[i + 1][0].components[0].customId.split("#")[0]
