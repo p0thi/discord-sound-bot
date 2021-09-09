@@ -40,6 +40,10 @@ export default class AudioManager {
     sound: ISound,
     channel: VoiceChannel | StageChannel
   ): Promise<string | true> {
+    if (!sound) {
+      log.error("Cannot play undefied sound");
+      return;
+    }
     const dbGuild = await dbManager.getGuild({ discordId: member.guild.id });
     const databaseGuildManager = new DatabaseGuildManager(dbGuild);
     if (!(await databaseGuildManager.canPlaySounds(member))) {

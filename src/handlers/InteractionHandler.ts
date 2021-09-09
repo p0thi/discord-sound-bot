@@ -40,10 +40,12 @@ export default class InteractionHandler {
               });
 
               const [sound, member] = await Promise.all([
-                dbManager.getSound({
-                  command: intent,
-                  guild: dbGuild,
-                }),
+                intent === "random"
+                  ? dbManager.getRandomSoundForGuild(dbGuild)
+                  : dbManager.getSound({
+                      command: intent,
+                      guild: dbGuild,
+                    }),
                 interaction.guild.members.fetch(interaction.user.id),
               ]);
 

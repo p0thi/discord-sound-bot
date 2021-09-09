@@ -85,16 +85,17 @@ export default class MessageHandler {
         case "random":
           {
             deleter.add(msg, 2000);
-            let guild = await dbManager.getGuild({ discordId: msg.guild.id });
-            let sound = await dbManager.getRandomSoundForGuild(guild._id);
+            let dbGuild = await dbManager.getGuild({ discordId: msg.guild.id });
+            let sound = await dbManager.getRandomSoundForGuild(dbGuild);
 
             if (!sound) {
+              log.error("Sound not found");
               break;
             }
 
             audioManager.memberPlaySound(
               msg.member,
-              sound[0],
+              sound,
               msg.member.voice.channel as VoiceChannel
             );
           }

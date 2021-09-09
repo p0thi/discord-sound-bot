@@ -119,7 +119,7 @@ export default class PlayCommand
             switch (subCommand) {
               case "random":
                 {
-                  sound = await dbManager.getRandomSoundForGuild(guild.id);
+                  sound = await dbManager.getRandomSoundForGuild(dbGuild);
                 }
                 break;
               default:

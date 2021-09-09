@@ -144,13 +144,12 @@ export default class DatabaseManager {
     return sound;
   }
 
-  async getRandomSoundForGuild(guildId: string): Promise<ISound> {
-    return (
-      await Sound.aggregate<ISound>([
-        { $match: { guild: guildId } },
-        { $sample: { size: 1 } },
-      ])
-    )[0];
+  async getRandomSoundForGuild(guild: IGuild): Promise<ISound> {
+    const results = await Sound.aggregate<ISound>([
+      { $match: { guild: guild._id } },
+      { $sample: { size: 1 } },
+    ]);
+    return results[0];
   }
 
   async getAllGuildSounds(guild: IGuild) {

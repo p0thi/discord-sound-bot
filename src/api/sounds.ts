@@ -11,6 +11,7 @@ import DatabaseGuildManager from "../managers/DatabaseGuildManager";
 import DatabaseManager from "../managers/DatabaseManager";
 import SoundManager from "../managers/SoundManager";
 import IGuild from "../db/interfaces/IGuild";
+import ISound from "../db/interfaces/ISound";
 
 const authManager = new AuthManager();
 const dbManager = DatabaseManager.getInstance();
@@ -47,13 +48,13 @@ router.get("/play", playRateLimit, async (req, res) => {
     return;
   }
 
-  let sound;
-  let dbGuild;
+  let sound: ISound;
+  let dbGuild: IGuild;
   if (req.query.id === "random" && req.query.guild) {
     dbGuild = await dbManager.getGuild({
       discordId: req.query.guild as string,
     });
-    sound = (await dbManager.getRandomSoundForGuild(dbGuild._id))[0];
+    sound = await dbManager.getRandomSoundForGuild(dbGuild);
   } else {
     sound = await dbManager.getSoundById(req.query.id as string);
     try {

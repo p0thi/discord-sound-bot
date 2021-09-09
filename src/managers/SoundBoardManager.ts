@@ -94,6 +94,7 @@ export default class SoundBoardManager {
     const dbGuild = await dbManager.getGuild({ discordId: guild.id });
     const sounds = await dbManager.getAllGuildSounds(dbGuild);
     sounds.sort((a, b) => a.command.localeCompare(b.command));
+
     const perChunk = 5;
     const chunks = sounds.reduce((resultArray: ISound[][], item, index) => {
       const chunkIndex = Math.floor(index / perChunk);
@@ -202,7 +203,27 @@ export default class SoundBoardManager {
       }
     }
 
-    for (let i = rowChunks.length; i < messages.length; i++) {
+    const randomMessageOptions = {
+      content: "Random",
+      components: [
+        new MessageActionRow().addComponents([
+          new MessageButton()
+            .setCustomId("random#soundboardButton")
+            .setLabel("Random 🔀")
+            .setStyle("PRIMARY"),
+        ]),
+      ],
+    } as MessageOptions;
+
+    if (messages.length > rowChunks.length) {
+      if (messages[rowChunks.length].content !== randomMessageOptions.content) {
+        messages[rowChunks.length].edit(randomMessageOptions);
+      }
+    } else {
+      this.channel.send(randomMessageOptions);
+    }
+
+    for (let i = rowChunks.length + 1; i < messages.length; i++) {
       messages[i].delete().catch(() => {});
     }
   }
@@ -234,7 +255,7 @@ export default class SoundBoardManager {
     ).filter(
       (message) =>
         message.author.id === this.channel.guild.me.id &&
-        message.content.startsWith("Commands")
+        this.isMessageCommandMessage(message)
     );
     return Array.from(messages.values());
   }
@@ -248,7 +269,7 @@ export default class SoundBoardManager {
       for (const message of messages.values()) {
         if (
           message.author.id !== this.channel.guild.me.id ||
-          !message.content.startsWith("Commands")
+          !this.isMessageCommandMessage(message)
         ) {
           otherUserMessagesFound = true;
           messagesToDelete.push(message);
@@ -270,6 +291,13 @@ export default class SoundBoardManager {
         }
       }
     }
+  }
+
+  private isMessageCommandMessage(message: Message): boolean {
+    return (
+      message.content.startsWith("Commands") ||
+      message.content.startsWith("Random")
+    );
   }
 
   async deleteSoundBoardMessages() {
