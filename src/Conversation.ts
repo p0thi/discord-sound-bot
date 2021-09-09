@@ -93,6 +93,7 @@ export default class Conversation {
     conv.confirmed = false;
     conv._buttonCollector =
       triggerMessage.channel.createMessageComponentCollector({
+        componentType: "BUTTON",
         filter: (i) => i.customId === `conversation-abort#${conv.uid}`,
         max: 1,
       });

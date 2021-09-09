@@ -22,7 +22,7 @@
     "bufferutil": "^4.0.1",
     "cors": "^2.8.5",
     "discord-api-types": "^0.22.0",
-    "discord.js": "^13.2.0-dev.1629633772.70cc029",
+    "discord.js": "13.1.0",
     "dotenv": "^8.2.0",
     "esm": "^3.2.25",
     "express": "^4.17.1",
