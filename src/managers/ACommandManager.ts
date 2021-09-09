@@ -183,6 +183,11 @@ export default abstract class ACommandManager
     guild: Guild
   ): Promise<ApplicationCommandPermissionData[]> {
     return [
+      {
+        id: process.env.BOT_OWNER,
+        type: "USER",
+        permission: true,
+      } as ApplicationCommandPermissionData,
       ...(template.forOwner
         ? [
             {
