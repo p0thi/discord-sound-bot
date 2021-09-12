@@ -1,4 +1,6 @@
 import DatabaseManager from "./DatabaseManager";
+import ffmpegStatic from "ffmpeg-static";
+// import ffprobeStatic from "ffprobe-static";
 import FfmpegCommand from "fluent-ffmpeg";
 
 import {
@@ -198,6 +200,7 @@ export default class AudioManager {
     }
     const meanVolume = await new Promise<number>((resolve, reject) => {
       new FfmpegCommand()
+        .setFfmpegPath(ffmpegStatic)
         .input(dbManager.getFileStream(sound.file))
         .withAudioFilter("volumedetect")
         .on("error", function (err) {
