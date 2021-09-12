@@ -1,4 +1,5 @@
 import DatabaseManager from "./DatabaseManager";
+import FfmpegCommand from "fluent-ffmpeg";
 
 import {
   AudioPlayerStatus,
@@ -14,9 +15,11 @@ import {
 
 import { GuildMember, Message, StageChannel, VoiceChannel } from "discord.js";
 import DatabaseGuildManager from "./DatabaseGuildManager";
+import mongodb from "mongodb";
 import ISound from "../db/interfaces/ISound";
 import log from "../log";
 import { RateLimiterMemory, RateLimiterRes } from "rate-limiter-flexible";
+import IGuild from "../db/interfaces/IGuild";
 
 const dbManager = DatabaseManager.getInstance();
 const rateLimiter = new RateLimiterMemory({
@@ -64,7 +67,7 @@ export default class AudioManager {
       rateLimiter
         .consume(`${member.id}#${channel.guild.id}`, 1)
         .then((rateRes: RateLimiterRes) => {
-          this.play(sound, channel).then(() => resolve(true));
+          this.play(sound, dbGuild, channel).then(() => resolve(true));
         })
         .catch((rateRes: RateLimiterRes) => {
           resolve(
@@ -77,7 +80,11 @@ export default class AudioManager {
     return result;
   }
 
-  private async play(sound: ISound, channel: VoiceChannel): Promise<void> {
+  private async play(
+    sound: ISound,
+    dbGuild: IGuild,
+    channel: VoiceChannel
+  ): Promise<void> {
     return new Promise<void>(async (resolve, reject) => {
       if (!channel.joinable || !channel.speakable) {
         return;
@@ -100,7 +107,14 @@ export default class AudioManager {
 
       log.info(`playing sound "${sound.command}" in ${channel.guild.name}`);
 
-      let readStream;
+      const meanVolume = await AudioManager.getAudioFileMeanVolume(
+        sound
+      ); /* .catch(
+        () => {
+          log.error("Could not get mean volume of sound");
+        }
+      ); */
+      let readStream: mongodb.GridFSBucketReadStream;
 
       try {
         readStream = dbManager.getFileStream(sound.file);
@@ -116,7 +130,16 @@ export default class AudioManager {
       }
       const player = AudioManager._guildAudioPlayers.get(channel.guild.id);
       const resource = createAudioResource(readStream, { inlineVolume: true });
-      resource.volume?.setVolume(0.5);
+      const generalVolume = dbGuild.soundVolume;
+      if (meanVolume) {
+        const volume = Math.min(20, -20 + Math.abs(meanVolume));
+        resource.volume?.setVolumeDecibels(volume);
+        resource.volume?.setVolume(
+          resource.volume?.volume * Math.pow(generalVolume, 1.2)
+        );
+      } else {
+        resource.volume?.setVolumeDecibels(-15);
+      }
 
       player.pause();
       player.play(resource);
@@ -167,5 +190,43 @@ export default class AudioManager {
         newHandler
       );
     });
+  }
+
+  private static async getAudioFileMeanVolume(sound: ISound): Promise<number> {
+    if (sound.meanVolume) {
+      return sound.meanVolume;
+    }
+    const meanVolume = await new Promise<number>((resolve, reject) => {
+      new FfmpegCommand()
+        .input(dbManager.getFileStream(sound.file))
+        .withAudioFilter("volumedetect")
+        .on("error", function (err) {
+          // console.log("An error occurred: " + err.message);
+          reject();
+        })
+        .on("end", function (stdout, stderr: string) {
+          // console.log("finished, ffmpeg output is:\n" + stdout);
+          // console.log("finished, ffmpeg output is:\n" + stderr);
+          const matches = stderr.match(/mean_volume:\s(.*)\sdB/m);
+          if (matches.length > 1) {
+            resolve(parseFloat(matches[1]));
+          } else {
+            reject();
+          }
+        })
+        .format(null)
+        .saveToFile("/dev/null");
+    }).catch(() => {
+      log.error("Could not calculate meanVolume");
+    });
+
+    if (!meanVolume) {
+      return;
+    }
+
+    sound.meanVolume = meanVolume;
+    console.log(sound);
+    await sound.save().catch((e) => {});
+    return meanVolume;
   }
 }

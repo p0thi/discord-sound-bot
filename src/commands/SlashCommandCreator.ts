@@ -18,7 +18,7 @@ import IGuildSlashCommand from "./guild_commands/IGuildCommand";
 import SoundCommand from "./guild_commands/slash_commands/SoundCommand";
 import { GroupPermission, groupPermissions } from "../db/models/Guild";
 import PermissionGroupCommand from "./guild_commands/slash_commands/PermissionGroupCommand";
-import PrefixCommand from "./guild_commands/slash_commands/PrefixCommand";
+import SettingsCommand from "./guild_commands/slash_commands/SettingsCommand";
 import { hyperlink, SlashCommandBuilder } from "@discordjs/builders";
 import MultiPageMessage, {
   MultiPageMessageOfFieldsOptions,
@@ -52,7 +52,7 @@ export default abstract class SlashCommandCreator {
       JoinSoundCommand.getInstance(guild),
       PermissionGroupCommand.getInstance(guild),
       SoundBoardCommand.getInstance(guild),
-      PrefixCommand.getInstance(guild),
+      SettingsCommand.getInstance(guild),
     ];
     return commands;
   }

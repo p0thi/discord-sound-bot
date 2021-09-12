@@ -18,6 +18,7 @@ export default interface IGuild extends Document {
   discordId: string;
   maxSounds: number;
   maxSoundDuration: number;
+  soundVolume: number;
   bannedUsers: Types.Array<IUser>;
   permissionGroups: Types.DocumentArray<IPermissionGroup>;
   joinSounds: Types.Map<ObjectId>;

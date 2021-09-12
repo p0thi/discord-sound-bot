@@ -13,6 +13,7 @@ const soundSchema: Schema = new Schema(
       unique: true,
       required: true,
     },
+    meanVolume: { type: Number },
     guild: {
       type: Schema.Types.ObjectId,
       ref: "Guild",

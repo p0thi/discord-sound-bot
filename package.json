@@ -29,6 +29,7 @@
     "express-fileupload": "^1.1.7-alpha.1",
     "express-rate-limit": "^5.1.1",
     "ffmpeg-static": "^4.4.0",
+    "fluent-ffmpeg": "^2.1.2",
     "fs": "^0.0.1-security",
     "gridfs-stream": "^1.1.1",
     "he": "^1.2.0",

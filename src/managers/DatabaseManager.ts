@@ -9,6 +9,7 @@ import IAudioFile from "../db/interfaces/IAudioFile";
 import IGuild from "../db/interfaces/IGuild";
 import ISound from "../db/interfaces/ISound";
 import IUser from "../db/interfaces/IUser";
+import AudioFileFileModel from "../db/models/AudioFile";
 import Guild from "../db/models/Guild";
 import Sound from "../db/models/Sound";
 import User from "../db/models/User";
@@ -149,7 +150,7 @@ export default class DatabaseManager {
       { $match: { guild: guild._id } },
       { $sample: { size: 1 } },
     ]);
-    return results[0];
+    return await this.getSoundById(results[0]._id);
   }
 
   async getAllGuildSounds(guild: IGuild) {

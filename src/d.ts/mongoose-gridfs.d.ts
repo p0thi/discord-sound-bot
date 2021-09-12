@@ -45,6 +45,7 @@ declare module "mongoose-gridfs" {
     filename: string;
     contentType: string;
     aliases: Array<string>;
+    meanVolume: number;
     metadata: object;
   }
 
@@ -63,14 +64,14 @@ declare module "mongoose-gridfs" {
     readFile(
       file: MongoGridFSOptions,
       readCb: ReadCallback
-    ): mongodb.GridFSBucketWriteStream;
+    ): mongodb.GridFSBucketReadStream;
     deleteFile(
       fileId: string | number | object,
       deleteCb: DeleteCallback
     ): void;
     findOne(file: MongoGridFSOptions, findCb: FindCallback): void;
     findById(fileId: string | number | object, findCb: FindCallback): void;
-    read(options: MongoGridFSOptions): mongodb.GridFSBucketWriteStream;
+    read(options: MongoGridFSOptions): mongodb.GridFSBucketReadStream;
     write(
       options: MongoGridFSOptions,
       stream: NodeJS.ReadableStream,

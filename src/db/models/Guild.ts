@@ -51,6 +51,7 @@ const guildSchema: Schema = new Schema(
     discordId: { type: String, unique: true, required: true },
     maxSounds: { type: Number, default: defaultMaxSounds },
     maxSoundDuration: { type: Number, default: defaultMaxDuration },
+    soundVolume: { type: Number, default: 1 },
     permissionGroups: {
       type: [permissionGroupSchema],
       default() {

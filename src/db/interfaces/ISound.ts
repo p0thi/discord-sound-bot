@@ -7,6 +7,7 @@ export default interface ISound extends Document {
   command: string;
   description: string;
   file: IAudioFile;
+  meanVolume: number;
   guild: IGuild;
   creator: IUser;
   updatedAt: Date;
