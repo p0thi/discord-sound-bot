@@ -352,7 +352,10 @@ router.get("/guildsounds/:id", async (req, res) => {
     log.error("Member not found");
   }
   if (!user && req.userId !== process.env.BOT_OWNER) {
-    _sendError(res, "User not on this server");
+    _sendError(
+      res,
+      `User not on this server. User: ${req.userId}; Server: ${req.params.id}`
+    );
     return;
   }
 

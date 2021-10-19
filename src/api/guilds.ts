@@ -47,11 +47,13 @@ router.get("/all", async (req, res) => {
               let match = {
                 $match: {
                   $expr: {
-                    $and: [
+                    $or: [
                       ...(req.userId === process.env.BOT_OWNER
-                        ? [{ $in: ["$discordId", userGuildIds] }]
+                        ? [{ $in: ["$discordId", botGuilds.map((g) => g.id)] }]
                         : []),
-                      { $in: ["$discordId", botGuilds.map((g) => g.id)] },
+                      {
+                        $in: ["$discordId", userGuildIds],
+                      },
                     ],
                   },
                 },
