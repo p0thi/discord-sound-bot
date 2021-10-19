@@ -135,15 +135,21 @@ router.get("/all", async (req, res) => {
                   const dbGuildManager = new DatabaseGuildManager(dbGuild);
                   try {
                     guild.icon = botGuild.iconURL();
+                  } catch (error) {}
+                  try {
                     guild.name = botGuild.name;
+                  } catch (error) {}
+                  try {
                     guild.owner =
                       fetchedBotGuild.ownerId === req.userId ||
                       (!!req.userId && req.userId === process.env.BOT_OWNER);
-
+                  } catch (error) {}
+                  try {
                     guild.userPermissions = dbGuildManager
                       .getMemberGroupPermissions(member)
                       .map((p) => groupPermissions.get(p));
-
+                  } catch (error) {}
+                  try {
                     guild.roles = fetchedBotGuild.roles.cache
                       .filter((r) => !r.managed)
                       .map((r) => ({
@@ -151,12 +157,7 @@ router.get("/all", async (req, res) => {
                         name: r.name,
                         hexColor: r.hexColor,
                       }));
-                  } catch (error) {
-                    log.error("ERROR:", error);
-                    log.error("user id:", req.userId);
-                    log.error("in guild", botGuilds.get(guild.id).name);
-                    log.error("bot guild", botGuild);
-                  }
+                  } catch (error) {}
                 })
               );
 
