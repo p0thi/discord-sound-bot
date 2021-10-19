@@ -41,7 +41,7 @@ router.get("/all", async (req, res) => {
             .json()
             .then(async (json) => {
               // await req.bot.guilds.fetch();
-              let botGuilds = await req.bot.guilds.fetch();
+              let botGuilds = req.bot.guilds.cache;
               let userGuildIds = json.map((item) => item.id);
 
               if (req.userId === process.env.BOT_OWNER) {
@@ -134,21 +134,25 @@ router.get("/all", async (req, res) => {
 
                   const dbGuildManager = new DatabaseGuildManager(dbGuild);
                   try {
-                    guild.icon = botGuild.iconURL();
+                    guild.icon = fetchedBotGuild.iconURL();
                   } catch (error) {}
+
                   try {
-                    guild.name = botGuild.name;
+                    guild.name = fetchedBotGuild.name;
                   } catch (error) {}
+
                   try {
                     guild.owner =
                       fetchedBotGuild.ownerId === req.userId ||
                       (!!req.userId && req.userId === process.env.BOT_OWNER);
                   } catch (error) {}
+
                   try {
                     guild.userPermissions = dbGuildManager
                       .getMemberGroupPermissions(member)
                       .map((p) => groupPermissions.get(p));
                   } catch (error) {}
+
                   try {
                     guild.roles = fetchedBotGuild.roles.cache
                       .filter((r) => !r.managed)
