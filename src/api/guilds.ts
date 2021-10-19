@@ -41,15 +41,25 @@ router.get("/all", async (req, res) => {
             .json()
             .then(async (json) => {
               // await req.bot.guilds.fetch();
-              let botGuilds = req.bot.guilds.cache;
+              let botGuilds = await req.bot.guilds.fetch();
               let userGuildIds = json.map((item) => item.id);
+
+              if (req.userId === process.env.BOT_OWNER) {
+                log.info("BOT OWNER");
+                console.log("All guilds:");
+                console.log(botGuilds.map((g) => g.id));
+              }
 
               let match = {
                 $match: {
                   $expr: {
                     $or: [
                       ...(req.userId === process.env.BOT_OWNER
-                        ? [{ $in: ["$discordId", botGuilds.map((g) => g.id)] }]
+                        ? [
+                            {
+                              $in: ["$discordId", botGuilds.map((g) => g.id)],
+                            },
+                          ]
                         : []),
                       {
                         $in: ["$discordId", userGuildIds],
@@ -116,9 +126,10 @@ router.get("/all", async (req, res) => {
                   if (!botGuild) {
                     return;
                   }
+                  const fetchedBotGuild = await botGuild.fetch();
                   const [dbGuild, member] = await Promise.all([
                     dbManager.getGuild({ discordId: botGuild.id }),
-                    botGuild.members.fetch(req.userId),
+                    fetchedBotGuild.members.fetch(req.userId),
                   ]);
 
                   const dbGuildManager = new DatabaseGuildManager(dbGuild);
@@ -126,14 +137,14 @@ router.get("/all", async (req, res) => {
                     guild.icon = botGuild.iconURL();
                     guild.name = botGuild.name;
                     guild.owner =
-                      botGuild.ownerId === req.userId ||
+                      fetchedBotGuild.ownerId === req.userId ||
                       (!!req.userId && req.userId === process.env.BOT_OWNER);
 
                     guild.userPermissions = dbGuildManager
                       .getMemberGroupPermissions(member)
                       .map((p) => groupPermissions.get(p));
 
-                    guild.roles = botGuild.roles.cache
+                    guild.roles = fetchedBotGuild.roles.cache
                       .filter((r) => !r.managed)
                       .map((r) => ({
                         id: r.id,
