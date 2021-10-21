@@ -40,7 +40,10 @@ router.get("/group/all/:guildId", async (req, res) => {
 
   const dbGuildManager = new DatabaseGuildManager(dbGuild);
 
-  if (!member || !dbGuildManager.canManageGroups(member)) {
+  if (
+    !dbGuildManager.isBotOwner(req.userId) &&
+    (!member || !dbGuildManager.canManageGroups(member))
+  ) {
     _sendError(res, "You do not have permission to manage groups");
     return;
   }
@@ -62,7 +65,10 @@ router.patch("/group/edit/:guild/:id", async (req, res) => {
 
   const dbGuildManager = new DatabaseGuildManager(dbGuild);
 
-  if (!member || !dbGuildManager.canManageGroups(member)) {
+  if (
+    !dbGuildManager.isBotOwner(req.userId) &&
+    (!member || !dbGuildManager.canManageGroups(member))
+  ) {
     _sendError(res, "You do not have permission to manage groups");
     return;
   }
@@ -115,7 +121,10 @@ router.post("/group/create", async (req, res) => {
   });
 
   const dbGuildManager = new DatabaseGuildManager(dbGuild);
-  if (!member || !dbGuildManager.canManageGroups(member)) {
+  if (
+    !dbGuildManager.isBotOwner(req.userId) &&
+    (!member || !dbGuildManager.canManageGroups(member))
+  ) {
     _sendError(res, "Insufficient permissions");
     return;
   }
@@ -154,7 +163,10 @@ router.delete("/group/delete/:guild/:id", async (req, res) => {
   });
 
   const dbGuildManager = new DatabaseGuildManager(dbGuild);
-  if (!member || !dbGuildManager.canManageGroups(member)) {
+  if (
+    !dbGuildManager.isBotOwner(req.userId) &&
+    (!member || !dbGuildManager.canManageGroups(member))
+  ) {
     _sendError(res, "Insufficient permissions");
     return;
   }

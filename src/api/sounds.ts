@@ -95,7 +95,10 @@ router.get("/play", playRateLimit, async (req, res) => {
   }
 
   const dbGuildManager = new DatabaseGuildManager(dbGuild);
-  if (!(await dbGuildManager.canPlaySounds(guildMember))) {
+  if (
+    !dbGuildManager.isBotOwner(req.userId) &&
+    !(await dbGuildManager.canPlaySounds(guildMember))
+  ) {
     _sendError(res, "User is not allowed to play sounds");
     return;
   }
@@ -269,6 +272,7 @@ router.delete("/delete", async (req, res) => {
   if (
     sound.creator.discordId !== req.userId &&
     req.userId !== botGuild.ownerId &&
+    !dbGuildManager.isBotOwner(req.userId) &&
     (!member || !(await dbGuildManager.canDeleteSound(member, sound)))
   ) {
     _sendError(res, "Insufficient permissions", 403);
@@ -308,7 +312,10 @@ router.post("/joinsound", async (req, res) => {
 
     const dbGuildManager = new DatabaseGuildManager(dbGuild);
 
-    if (!member || !(await dbGuildManager.canUseJoinSound(member))) {
+    if (
+      !dbGuildManager.isBotOwner(req.userId) &&
+      (!member || !(await dbGuildManager.canUseJoinSound(member)))
+    ) {
       _sendError(res, "Insufficient permissions");
       return;
     }
@@ -327,7 +334,10 @@ router.post("/joinsound", async (req, res) => {
       });
     const dbGuildManager = new DatabaseGuildManager(dbGuild);
 
-    if (!member || !(await dbGuildManager.canUseJoinSound(member))) {
+    if (
+      !dbGuildManager.isBotOwner(req.userId) &&
+      (!member || !(await dbGuildManager.canUseJoinSound(member)))
+    ) {
       _sendError(res, "Insufficient permissions");
       return;
     }

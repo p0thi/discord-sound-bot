@@ -101,9 +101,9 @@ export default class SoundBoardCommand
 
             const subCommand = interaction.options.getSubcommand(false);
 
-            const [dbGuild, dbUser, member] = await Promise.all([
+            const [dbGuild, member] = await Promise.all([
               dbManager.getGuild({ discordId: guild.id }),
-              dbManager.getUser({ discordId: interaction.user.id }),
+              // dbManager.getUser({ discordId: interaction.user.id }),
               guild.members.fetch(interaction.user.id),
             ]);
             const dbGuildManager = new DatabaseGuildManager(dbGuild);

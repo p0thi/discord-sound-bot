@@ -200,6 +200,7 @@ router.post("/settings/:id", async (req, res) => {
   if (
     !botUser ||
     (!botUser.permissions.has("ADMINISTRATOR") &&
+      !dbGuildManager.isBotOwner(req.userId) &&
       (!member || !(await dbGuildManager.canManageGuildSettings(member))))
   ) {
     _sendError(res, "User has insufficient permissions");

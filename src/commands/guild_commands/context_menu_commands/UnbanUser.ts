@@ -94,7 +94,10 @@ export default class UnbanUser
 
             const dbGuildManager = new DatabaseGuildManager(dbGuild);
 
-            if (!(await dbGuildManager.canBanUsers(unbanningMember))) {
+            if (
+              !dbGuildManager.isBotOwner(unbanningMember.id) &&
+              !(await dbGuildManager.canBanUsers(unbanningMember))
+            ) {
               interaction.followUp({
                 content: "Error: You don't have permission to ban users.",
                 ephemeral: true,
