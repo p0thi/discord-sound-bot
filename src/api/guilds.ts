@@ -44,13 +44,6 @@ router.get("/all", async (req, res) => {
               let botGuilds = req.bot.guilds.cache;
               let userGuildIds = json.map((item) => item.id);
 
-              if (req.userId === process.env.BOT_OWNER) {
-                log.info("BOT OWNER");
-                console.log("All guilds:");
-                console.log(botGuilds);
-                console.log(botGuilds.map((g) => g.id));
-              }
-
               let match = {
                 $match: {
                   $expr: {
@@ -121,50 +114,62 @@ router.get("/all", async (req, res) => {
                   },
                 ]);
 
-              await Promise.allSettled(
-                intersectingGuilds
-                  .filter((g) => botGuilds.has(g.id))
-                  .map(async (guild) => {
-                    const botGuild = botGuilds.get(guild.id);
-
-                    const fetchedBotGuild = await botGuild.fetch();
-                    const [dbGuild, member] = await Promise.all([
-                      dbManager.getGuild({ discordId: botGuild.id }),
-                      fetchedBotGuild.members.fetch(req.userId),
-                    ]);
-
-                    const dbGuildManager = new DatabaseGuildManager(dbGuild);
-                    try {
-                      guild.icon = fetchedBotGuild.iconURL();
-                    } catch (error) {}
-
-                    try {
-                      guild.name = fetchedBotGuild.name;
-                    } catch (error) {}
-
-                    try {
-                      guild.owner =
-                        fetchedBotGuild.ownerId === req.userId ||
-                        (!!req.userId && req.userId === process.env.BOT_OWNER);
-                    } catch (error) {}
-
-                    try {
-                      guild.userPermissions = dbGuildManager
-                        .getMemberGroupPermissions(member)
-                        .map((p) => groupPermissions.get(p));
-                    } catch (error) {}
-
-                    try {
-                      guild.roles = fetchedBotGuild.roles.cache
-                        .filter((r) => !r.managed)
-                        .map((r) => ({
-                          id: r.id,
-                          name: r.name,
-                          hexColor: r.hexColor,
-                        }));
-                    } catch (error) {}
-                  })
+              intersectingGuilds = intersectingGuilds.filter((g) =>
+                botGuilds.has(g.id)
               );
+
+              const settletResult = await Promise.allSettled(
+                intersectingGuilds.map(async (guild) => {
+                  const botGuild = botGuilds.get(guild.id);
+
+                  const fetchedBotGuild = await botGuild.fetch();
+                  const [dbGuild, member] = await Promise.all([
+                    dbManager.getGuild({ discordId: guild.id }),
+                    fetchedBotGuild.members.fetch(req.userId),
+                  ]);
+
+                  const dbGuildManager = new DatabaseGuildManager(dbGuild);
+
+                  if (req.userId === process.env.BOT_OWNER) {
+                    log.info("BOT OWNER");
+                    console.log(fetchedBotGuild);
+                  }
+
+                  try {
+                    guild.icon = fetchedBotGuild.iconURL();
+                  } catch (error) {}
+
+                  try {
+                    guild.name = fetchedBotGuild.name;
+                  } catch (error) {}
+
+                  try {
+                    guild.owner =
+                      fetchedBotGuild.ownerId === req.userId ||
+                      (!!req.userId && req.userId === process.env.BOT_OWNER);
+                  } catch (error) {}
+
+                  try {
+                    guild.userPermissions = dbGuildManager
+                      .getMemberGroupPermissions(member)
+                      .map((p) => groupPermissions.get(p));
+                  } catch (error) {}
+
+                  try {
+                    guild.roles = fetchedBotGuild.roles.cache
+                      .filter((r) => !r.managed)
+                      .map((r) => ({
+                        id: r.id,
+                        name: r.name,
+                        hexColor: r.hexColor,
+                      }));
+                  } catch (error) {}
+                })
+              );
+
+              settletResult
+                .filter((r) => r.status === "rejected")
+                .forEach((r: PromiseRejectedResult) => console.log(r.reason));
 
               res.status(200).send(intersectingGuilds);
             })
