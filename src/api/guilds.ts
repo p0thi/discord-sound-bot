@@ -47,6 +47,7 @@ router.get("/all", async (req, res) => {
               if (req.userId === process.env.BOT_OWNER) {
                 log.info("BOT OWNER");
                 console.log("All guilds:");
+                console.log(botGuilds);
                 console.log(botGuilds.map((g) => g.id));
               }
 
@@ -121,48 +122,48 @@ router.get("/all", async (req, res) => {
                 ]);
 
               await Promise.allSettled(
-                intersectingGuilds.map(async (guild) => {
-                  const botGuild = botGuilds.get(guild.id);
-                  if (!botGuild) {
-                    return;
-                  }
-                  const fetchedBotGuild = await botGuild.fetch();
-                  const [dbGuild, member] = await Promise.all([
-                    dbManager.getGuild({ discordId: botGuild.id }),
-                    fetchedBotGuild.members.fetch(req.userId),
-                  ]);
+                intersectingGuilds
+                  .filter((g) => botGuilds.has(g.id))
+                  .map(async (guild) => {
+                    const botGuild = botGuilds.get(guild.id);
 
-                  const dbGuildManager = new DatabaseGuildManager(dbGuild);
-                  try {
-                    guild.icon = fetchedBotGuild.iconURL();
-                  } catch (error) {}
+                    const fetchedBotGuild = await botGuild.fetch();
+                    const [dbGuild, member] = await Promise.all([
+                      dbManager.getGuild({ discordId: botGuild.id }),
+                      fetchedBotGuild.members.fetch(req.userId),
+                    ]);
 
-                  try {
-                    guild.name = fetchedBotGuild.name;
-                  } catch (error) {}
+                    const dbGuildManager = new DatabaseGuildManager(dbGuild);
+                    try {
+                      guild.icon = fetchedBotGuild.iconURL();
+                    } catch (error) {}
 
-                  try {
-                    guild.owner =
-                      fetchedBotGuild.ownerId === req.userId ||
-                      (!!req.userId && req.userId === process.env.BOT_OWNER);
-                  } catch (error) {}
+                    try {
+                      guild.name = fetchedBotGuild.name;
+                    } catch (error) {}
 
-                  try {
-                    guild.userPermissions = dbGuildManager
-                      .getMemberGroupPermissions(member)
-                      .map((p) => groupPermissions.get(p));
-                  } catch (error) {}
+                    try {
+                      guild.owner =
+                        fetchedBotGuild.ownerId === req.userId ||
+                        (!!req.userId && req.userId === process.env.BOT_OWNER);
+                    } catch (error) {}
 
-                  try {
-                    guild.roles = fetchedBotGuild.roles.cache
-                      .filter((r) => !r.managed)
-                      .map((r) => ({
-                        id: r.id,
-                        name: r.name,
-                        hexColor: r.hexColor,
-                      }));
-                  } catch (error) {}
-                })
+                    try {
+                      guild.userPermissions = dbGuildManager
+                        .getMemberGroupPermissions(member)
+                        .map((p) => groupPermissions.get(p));
+                    } catch (error) {}
+
+                    try {
+                      guild.roles = fetchedBotGuild.roles.cache
+                        .filter((r) => !r.managed)
+                        .map((r) => ({
+                          id: r.id,
+                          name: r.name,
+                          hexColor: r.hexColor,
+                        }));
+                    } catch (error) {}
+                  })
               );
 
               res.status(200).send(intersectingGuilds);
