@@ -113,9 +113,9 @@ export default class SoundBoardManager {
       rows.push(
         new MessageActionRow().addComponents(
           chunk.map((c) => {
-            const spacer = " ".repeat(
+            const spacer = "    "; /* .repeat(
               Math.floor(Math.max(16 - c.command.length, 0) * 1.5)
-            );
+            ); */
             const label = spacer + c.command + spacer;
             return new MessageButton()
               .setLabel(label)
@@ -191,6 +191,9 @@ export default class SoundBoardManager {
               (component as MessageButton).customId !==
                 (messages[i].components[x].components[y] as MessageButton)
                   .customId ||
+              (component as MessageButton).label !==
+                (messages[i].components[x].components[y] as MessageButton)
+                  .label ||
               messageOptions.content !== messages[i].content
             ) {
               messages[i].edit(messageOptions);
