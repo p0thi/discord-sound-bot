@@ -19,12 +19,22 @@ const dbManager = DatabaseManager.getInstance();
 
 export default class DatabaseGuildManager {
   dbGuild: IGuild;
+  botOwnerId: String;
 
   constructor(dbGuild: IGuild) {
     this.dbGuild = dbGuild;
   }
 
+  isBotOwner(id: String): boolean {
+    if (!this.botOwnerId) {
+      this.botOwnerId = process.env.BOT_OWNER;
+    }
+
+    return id === (this.botOwnerId || process.env.BOT_OWNER);
+  }
+
   async canUseJoinSound(member: GuildMember): Promise<boolean> {
+    if (this.isBotOwner(member.id)) return true;
     const dbUser = await dbManager.getUser({ discordId: member.id });
     return (
       !this.isBanned(dbUser) &&
@@ -38,6 +48,7 @@ export default class DatabaseGuildManager {
   }
 
   async canAddSounds(member: GuildMember): Promise<boolean> {
+    if (this.isBotOwner(member.id)) return true;
     const dbUser = await dbManager.getUser({ discordId: member.id });
     return (
       !this.isBanned(dbUser) &&
@@ -49,6 +60,7 @@ export default class DatabaseGuildManager {
   }
 
   async canPlaySounds(member: GuildMember): Promise<boolean> {
+    if (this.isBotOwner(member.id)) return true;
     const dbUser = await dbManager.getUser({ discordId: member.id });
     return (
       !this.isBanned(dbUser) &&
@@ -60,6 +72,7 @@ export default class DatabaseGuildManager {
   }
 
   async canManageGuildSettings(member: GuildMember): Promise<boolean> {
+    if (this.isBotOwner(member.id)) return true;
     const dbUser = await dbManager.getUser({ discordId: member.id });
     return (
       !this.isBanned(dbUser) &&
@@ -74,6 +87,7 @@ export default class DatabaseGuildManager {
   }
 
   async canManageGroups(member: GuildMember): Promise<boolean> {
+    if (this.isBotOwner(member.id)) return true;
     const dbUser = await dbManager
       .getUser({ discordId: member.id })
       .catch((e) => {
@@ -95,6 +109,7 @@ export default class DatabaseGuildManager {
   }
 
   async canBanUsers(member: GuildMember): Promise<boolean> {
+    if (this.isBotOwner(member.id)) return true;
     const dbUser = await dbManager.getUser({ discordId: member.id });
     return (
       (!this.isBanned(dbUser) || this.isAdminOrOwner(member)) &&
@@ -107,6 +122,7 @@ export default class DatabaseGuildManager {
   }
 
   async canDeleteSound(member: GuildMember, sound: ISound): Promise<boolean> {
+    if (this.isBotOwner(member.id)) return true;
     const dbUser = await dbManager.getUser({ discordId: member.id });
     return (
       !this.isBanned(dbUser) &&
@@ -145,6 +161,7 @@ export default class DatabaseGuildManager {
   }
 
   async maxMemberSoundsReached(member: GuildMember): Promise<boolean> {
+    if (this.isBotOwner(member.id)) return false;
     const dbUser = await dbManager.getUser({ discordId: member.id });
     let soundCount = await SoundModel.count({
       guild: this.dbGuild,
@@ -158,6 +175,7 @@ export default class DatabaseGuildManager {
     permission: GroupPermissionKey
   ): boolean {
     log.debug(permission);
+    if (this.isBotOwner(member.id)) return true;
     for (const group of this.getMemberPermissionGroups(member)) {
       if (group.permissions && group.permissions.includes(permission)) {
         return true;
@@ -194,7 +212,7 @@ export default class DatabaseGuildManager {
   }
 
   getMaxSoundsPerUser(member: GuildMember): number {
-    if (this.isOwner(member)) {
+    if (this.isOwner(member) || this.isBotOwner(member.id)) {
       return this.dbGuild.maxSounds;
     }
     let result = 0;
@@ -208,7 +226,7 @@ export default class DatabaseGuildManager {
   }
 
   getMaxSoundDurationForMember(member: GuildMember): number {
-    if (this.isOwner(member)) {
+    if (this.isOwner(member) || this.isBotOwner(member.id)) {
       return this.dbGuild.maxSoundDuration;
     }
     let result = this.dbGuild.maxSoundDuration;

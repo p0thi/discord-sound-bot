@@ -194,12 +194,13 @@ router.post("/settings/:id", async (req, res) => {
   const botUser = botGuild.members.cache.get(req.userId);
   const dbGuild = await dbManager.getGuild({ discordId: req.params.id });
   const dbGuildManager = new DatabaseGuildManager(dbGuild);
-  const member = await botGuild.members.fetch(req.userId);
+  const member = await botGuild.members.fetch(req.userId).catch(() => {
+    log.warn(`Could not get Member for ${req.userId}`);
+  });
   if (
     !botUser ||
     (!botUser.permissions.has("ADMINISTRATOR") &&
-      req.userId !== process.env.BOT_OWNER &&
-      !(await dbGuildManager.canManageGuildSettings(member)))
+      (!member || !(await dbGuildManager.canManageGuildSettings(member))))
   ) {
     _sendError(res, "User has insufficient permissions");
     return;

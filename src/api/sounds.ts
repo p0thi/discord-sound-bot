@@ -240,7 +240,9 @@ router.delete("/delete", async (req, res) => {
     .exec();
   const dbGuild = sound.guild;
   const botGuild = await req.bot.guilds.fetch(dbGuild.discordId);
-  const member = await botGuild.members.fetch(req.userId);
+  const member = await botGuild.members.fetch(req.userId).catch(() => {
+    log.warn(`Could not get Member for ${req.userId}`);
+  });
 
   // console.log('botGuild', botGuild.id)
   // console.log('dbGuild', dbGuild.discordId)
@@ -267,7 +269,7 @@ router.delete("/delete", async (req, res) => {
   if (
     sound.creator.discordId !== req.userId &&
     req.userId !== botGuild.ownerId &&
-    !(await dbGuildManager.canDeleteSound(member, sound))
+    (!member || !(await dbGuildManager.canDeleteSound(member, sound)))
   ) {
     _sendError(res, "Insufficient permissions", 403);
     return;
@@ -299,11 +301,14 @@ router.post("/joinsound", async (req, res) => {
     dbGuild = await dbManager.getGuild({ discordId: req.body.guild });
     const member = await req.bot.guilds.cache
       .get(req.body.guild)
-      .members.fetch(req.userId);
+      .members.fetch(req.userId)
+      .catch(() => {
+        log.warn(`Could not get Member for ${req.userId}`);
+      });
 
     const dbGuildManager = new DatabaseGuildManager(dbGuild);
 
-    if (!(await dbGuildManager.canUseJoinSound(member))) {
+    if (!member || !(await dbGuildManager.canUseJoinSound(member))) {
       _sendError(res, "Insufficient permissions");
       return;
     }
@@ -316,10 +321,13 @@ router.post("/joinsound", async (req, res) => {
     dbGuild = sound.guild;
     const member = await req.bot.guilds.cache
       .get(dbGuild.discordId)
-      .members.fetch(req.userId);
+      .members.fetch(req.userId)
+      .catch(() => {
+        log.warn(`Could not get Member for ${req.userId}`);
+      });
     const dbGuildManager = new DatabaseGuildManager(dbGuild);
 
-    if (!(await dbGuildManager.canUseJoinSound(member))) {
+    if (!member || !(await dbGuildManager.canUseJoinSound(member))) {
       _sendError(res, "Insufficient permissions");
       return;
     }

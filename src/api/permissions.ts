@@ -34,11 +34,13 @@ router.get("/group/all/:guildId", async (req, res) => {
     req.bot.guilds.fetch(req.params.guildId),
   ]);
 
-  const member = await guild.members.fetch(req.userId);
+  const member = await guild.members.fetch(req.userId).catch(() => {
+    log.warn(`Could not get Member for ${req.userId}`);
+  });
 
   const dbGuildManager = new DatabaseGuildManager(dbGuild);
 
-  if (!dbGuildManager.canManageGroups(member)) {
+  if (!member || !dbGuildManager.canManageGroups(member)) {
     _sendError(res, "You do not have permission to manage groups");
     return;
   }
@@ -54,11 +56,13 @@ router.patch("/group/edit/:guild/:id", async (req, res) => {
     req.bot.guilds.fetch(req.params.guild),
   ]);
 
-  const member = await guild.members.fetch(req.userId);
+  const member = await guild.members.fetch(req.userId).catch(() => {
+    log.warn(`Could not get Member for ${req.userId}`);
+  });
 
   const dbGuildManager = new DatabaseGuildManager(dbGuild);
 
-  if (!dbGuildManager.canManageGroups(member)) {
+  if (!member || !dbGuildManager.canManageGroups(member)) {
     _sendError(res, "You do not have permission to manage groups");
     return;
   }
@@ -106,15 +110,12 @@ router.post("/group/create", async (req, res) => {
     req.bot.guilds.fetch(req.body.guild),
   ]);
 
-  const member = await guild.members.fetch(req.userId);
-
-  if (!member) {
-    _sendError(res, "User is not in the server");
-    return;
-  }
+  const member = await guild.members.fetch(req.userId).catch(() => {
+    log.warn(`Could not get Member for ${req.userId}`);
+  });
 
   const dbGuildManager = new DatabaseGuildManager(dbGuild);
-  if (!dbGuildManager.canManageGroups(member)) {
+  if (!member || !dbGuildManager.canManageGroups(member)) {
     _sendError(res, "Insufficient permissions");
     return;
   }
@@ -148,15 +149,12 @@ router.delete("/group/delete/:guild/:id", async (req, res) => {
     req.bot.guilds.fetch(req.params.guild),
   ]);
 
-  const member = await guild.members.fetch(req.userId);
-
-  if (!member) {
-    _sendError(res, "User is not in the server");
-    return;
-  }
+  const member = await guild.members.fetch(req.userId).catch(() => {
+    log.warn(`Could not get Member for ${req.userId}`);
+  });
 
   const dbGuildManager = new DatabaseGuildManager(dbGuild);
-  if (!dbGuildManager.canManageGroups(member)) {
+  if (!member || !dbGuildManager.canManageGroups(member)) {
     _sendError(res, "Insufficient permissions");
     return;
   }

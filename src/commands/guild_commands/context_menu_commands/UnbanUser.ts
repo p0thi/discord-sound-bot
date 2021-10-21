@@ -70,27 +70,31 @@ export default class UnbanUser
           defaultPermission: this.defaultPermission,
           handler: async (interaction: ContextMenuInteraction) => {
             interaction.deferReply({ ephemeral: true });
-            const member: GuildMember = interaction.options.getMember(
+            const memberToUnban: GuildMember = interaction.options.getMember(
               "user"
             ) as GuildMember;
 
-            if (!member) {
+            const unbanningMember = interaction.guild.members.cache.get(
+              interaction.member.user.id
+            );
+
+            if (!memberToUnban) {
               interaction.followUp({
                 content: "Error: No user found.",
                 ephemeral: true,
               });
               return;
             }
-            const [dbUser, dbGuild] = await Promise.all([
+            const [dbUserToUnban, dbGuild] = await Promise.all([
               dbManager.getUser({
-                discordId: member.id,
+                discordId: memberToUnban.id,
               }),
               dbManager.getGuild({ discordId: interaction.guild.id }),
             ]);
 
             const dbGuildManager = new DatabaseGuildManager(dbGuild);
 
-            if (!(await dbGuildManager.canBanUsers(member))) {
+            if (!(await dbGuildManager.canBanUsers(unbanningMember))) {
               interaction.followUp({
                 content: "Error: You don't have permission to ban users.",
                 ephemeral: true,
@@ -98,7 +102,7 @@ export default class UnbanUser
               return;
             }
 
-            if (!dbGuild.bannedUsers.includes(dbUser.id)) {
+            if (!dbGuild.bannedUsers.includes(dbUserToUnban.id)) {
               interaction.followUp({
                 content: "Error: User is not banned.",
                 ephemeral: true,
@@ -106,10 +110,10 @@ export default class UnbanUser
               return;
             }
 
-            dbGuild.bannedUsers.remove(dbUser);
+            dbGuild.bannedUsers.remove(dbUserToUnban);
             await dbGuild.save();
             interaction.followUp({
-              content: `${member.displayName} has been **unbanned** from using the bot.`,
+              content: `${memberToUnban.displayName} has been **unbanned** from using the bot.`,
               ephemeral: true,
             });
           },

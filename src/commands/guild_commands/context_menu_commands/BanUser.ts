@@ -70,27 +70,31 @@ export default class BanUser
           defaultPermission: this.defaultPermission,
           handler: async (interaction: ContextMenuInteraction) => {
             interaction.deferReply({ ephemeral: true });
-            const member: GuildMember = interaction.options.getMember(
+            const memberToBan: GuildMember = interaction.options.getMember(
               "user"
             ) as GuildMember;
 
-            if (!member) {
+            const banningMember = interaction.guild.members.cache.get(
+              interaction.member.user.id
+            );
+
+            if (!memberToBan) {
               interaction.followUp({
                 content: "Error: No user found.",
                 ephemeral: true,
               });
               return;
             }
-            const [dbUser, dbGuild] = await Promise.all([
+            const [dbUserToBan, dbGuild] = await Promise.all([
               dbManager.getUser({
-                discordId: member.id,
+                discordId: memberToBan.id,
               }),
               dbManager.getGuild({ discordId: interaction.guild.id }),
             ]);
 
             const dbGuildManager = new DatabaseGuildManager(dbGuild);
 
-            if (!(await dbGuildManager.canBanUsers(member))) {
+            if (!(await dbGuildManager.canBanUsers(banningMember))) {
               interaction.followUp({
                 content: "Error: You don't have permission to ban users.",
                 ephemeral: true,
@@ -98,10 +102,10 @@ export default class BanUser
               return;
             }
 
-            dbGuild.bannedUsers.addToSet(dbUser);
+            dbGuild.bannedUsers.addToSet(dbUserToBan);
             await dbGuild.save();
             interaction.followUp({
-              content: `${member.displayName} has been **banned** from using the bot.`,
+              content: `${memberToBan.displayName} has been **banned** from using the bot.`,
               ephemeral: true,
             });
           },
