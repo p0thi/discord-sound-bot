@@ -125,7 +125,7 @@ router.get("/all", async (req, res) => {
                   const fetchedBotGuild = await botGuild.fetch();
                   const [dbGuild, member] = await Promise.all([
                     dbManager.getGuild({ discordId: guild.id }),
-                    fetchedBotGuild.members.fetch(req.userId),
+                    fetchedBotGuild.members.fetch(req.userId).catch((e) => {}),
                   ]);
 
                   const dbGuildManager = new DatabaseGuildManager(dbGuild);
@@ -150,9 +150,11 @@ router.get("/all", async (req, res) => {
                   } catch (error) {}
 
                   try {
-                    guild.userPermissions = dbGuildManager
-                      .getMemberGroupPermissions(member)
-                      .map((p) => groupPermissions.get(p));
+                    guild.userPermissions = member
+                      ? dbGuildManager
+                          .getMemberGroupPermissions(member)
+                          .map((p) => groupPermissions.get(p))
+                      : [];
                   } catch (error) {}
 
                   try {
