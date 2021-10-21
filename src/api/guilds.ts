@@ -105,7 +105,7 @@ router.get("/all", async (req, res) => {
                       },
                       banned: {
                         $in: [
-                          Types.ObjectId(user.id),
+                          new Types.ObjectId(user.id),
                           { $ifNull: ["$bannedUsers", []] },
                         ],
                       },

@@ -36,7 +36,7 @@ export default class DatabaseManager {
 
   async connect() {
     this.conn = await connect(process.env.BASE_MONGO_PATH + this.path, {
-      useNewUrlParser: true,
+      // useNewUrlParser: true,
     });
 
     this.AudioFile = createModel({
