@@ -122,30 +122,25 @@ router.get("/all", async (req, res) => {
                 intersectingGuilds.map(async (guild) => {
                   const botGuild = botGuilds.get(guild.id);
 
-                  const fetchedBotGuild = await botGuild.fetch();
+                  // const fetchedBotGuild = await botGuild.fetch();
                   const [dbGuild, member] = await Promise.all([
                     dbManager.getGuild({ discordId: guild.id }),
-                    fetchedBotGuild.members.fetch(req.userId).catch((e) => {}),
+                    botGuild.members.fetch(req.userId).catch((e) => {}),
                   ]);
 
                   const dbGuildManager = new DatabaseGuildManager(dbGuild);
 
-                  if (req.userId === process.env.BOT_OWNER) {
-                    log.info("BOT OWNER");
-                    console.log(fetchedBotGuild);
-                  }
-
                   try {
-                    guild.icon = fetchedBotGuild.iconURL();
+                    guild.icon = botGuild.iconURL();
                   } catch (error) {}
 
                   try {
-                    guild.name = fetchedBotGuild.name;
+                    guild.name = botGuild.name;
                   } catch (error) {}
 
                   try {
                     guild.owner =
-                      fetchedBotGuild.ownerId === req.userId ||
+                      botGuild.ownerId === req.userId ||
                       (!!req.userId && req.userId === process.env.BOT_OWNER);
                   } catch (error) {}
 
@@ -158,7 +153,7 @@ router.get("/all", async (req, res) => {
                   } catch (error) {}
 
                   try {
-                    guild.roles = fetchedBotGuild.roles.cache
+                    guild.roles = botGuild.roles.cache
                       .filter((r) => !r.managed)
                       .map((r) => ({
                         id: r.id,
@@ -171,7 +166,9 @@ router.get("/all", async (req, res) => {
 
               settletResult
                 .filter((r) => r.status === "rejected")
-                .forEach((r: PromiseRejectedResult) => console.log(r.reason));
+                .forEach((r: PromiseRejectedResult) => {
+                  log.error(`Guild not populated: ${r.reason}`);
+                });
 
               res.status(200).send(intersectingGuilds);
             })
