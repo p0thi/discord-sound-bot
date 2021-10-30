@@ -21,7 +21,11 @@ import ISound from "../../../db/interfaces/ISound";
 import AudioManager from "../../../managers/AudioManager";
 import DatabaseGuildManager from "../../../managers/DatabaseGuildManager";
 import DatabaseManager from "../../../managers/DatabaseManager";
-
+import {
+  SlashCommandBuilder,
+  SlashCommandSubcommandBuilder,
+  SlashCommandStringOption,
+} from "@discordjs/builders";
 const dbManager = DatabaseManager.getInstance();
 
 export default class PlayCommand
@@ -70,29 +74,27 @@ export default class PlayCommand
       permission,
       create: (): CustomApplicationCommand => {
         return {
-          name: this.name,
-          description: "Play sounds",
-          defaultPermission: this.defaultPermission,
-          options: [
-            {
-              name: "sound",
-              description: "Sound to play",
-              type: "SUB_COMMAND",
-              options: [
-                {
-                  name: "name",
-                  description: "Command of the sound",
-                  type: "STRING",
-                  required: true,
-                },
-              ],
-            },
-            {
-              name: "random",
-              description: "Play a random sound",
-              type: "SUB_COMMAND",
-            },
-          ],
+          apiCommand: new SlashCommandBuilder()
+            .setName(this.name)
+            .setDescription("Play sounds")
+            .setDefaultPermission(this.defaultPermission)
+            .addSubcommand(
+              new SlashCommandSubcommandBuilder()
+                .setName("sound")
+                .setDescription("Sound to play")
+                .addStringOption(
+                  new SlashCommandStringOption()
+                    .setName("name")
+                    .setDescription("Command of the sound")
+                    // .setAutocomplete(true)
+                    .setRequired(true)
+                )
+            )
+            .addSubcommand(
+              new SlashCommandSubcommandBuilder()
+                .setName("random")
+                .setDescription("Play random sound")
+            ),
           handler: async (interaction: CommandInteraction) => {
             interaction.deferReply({ ephemeral: true });
             const subCommand = interaction.options.getSubcommand();
@@ -147,6 +149,11 @@ export default class PlayCommand
               sound,
               member.voice.channel
             );
+
+            interaction.followUp({
+              content: `Playing sound: ${sound.command}`,
+              ephemeral: true,
+            });
           },
         } as CustomApplicationCommand;
       },

@@ -24,6 +24,10 @@ import SlashCommandCreator, {
 import { GroupPermission } from "../db/models/Guild";
 import log from "../log";
 import SlashCommandManager from "./SlashCommandManager";
+import { REST } from "@discordjs/rest";
+// const { REST } = require("@discordjs/rest");
+import { Routes } from "discord-api-types/v9";
+// const { Routes } = require("discord-api-types/v9");
 
 type Template = SlashCommandTemplate | ContextMenuCommandTemplate;
 
@@ -44,9 +48,11 @@ export default abstract class ACommandManager
     //     customCommand.permission
     //   ),
     // });
-    await target.guild.commands.edit(guildCommand, customCommand).catch((e) => {
-      log.error(`Could not edit command ${guildCommand.name}`);
-    });
+    await target.guild.commands
+      .edit(guildCommand, customCommand.apiCommand.toJSON())
+      .catch((e) => {
+        log.error(`Could not edit command ${guildCommand.name}`);
+      });
   }
 
   async onPermissionsChange(
@@ -83,41 +89,53 @@ export default abstract class ACommandManager
       return;
     }
 
-    const customGuildCommands = guildTemplates.map((c) => c.create());
+    const customGuildCommands = guildTemplates.map((c) =>
+      c.create().apiCommand.toJSON()
+    );
 
-    const setCommands = await guild.commands
-      .set(customGuildCommands)
-      .catch(async (e) => {
-        const owner = await guild.members
-          .fetch(guild.ownerId)
-          .catch((e) => console.log(e));
-        if (!owner) {
-          console.log("Owner not found");
-          return;
-        }
-        log.error(
-          `Could not set guild commands on ${guild.name} [${guild.id}]`
-        );
-        log.error(e.message);
-        log.info(
-          `Guild owner: ${owner.displayName} aka ${owner.user.username} [${guild.ownerId}]`
-        );
-        guild.members.fetch(guild.ownerId).then((owner) => {
-          owner.createDM().then((dm) => {
-            dm.send(
-              `I need further permissions to function properly. Please invite me to the server **${guild.name}** (<https://discord.com/channels/${guild.id}>) again using the following link:\n\nhttps://discord.com/api/oauth2/authorize?client_id=${guild.client.user.id}&permissions=36510493760&redirect_uri=http%3A%2F%2Flocalhost&scope=applications.commands%20bot`
-            ).then((m) => guild.leave());
-          });
-        });
-      });
+    const rest = new REST({ version: "9" }).setToken(guild.client.token);
+
+    const setCommands = await rest
+      .put(Routes.applicationGuildCommands(guild.client.user.id, guild.id), {
+        body: customGuildCommands,
+      })
+      .catch((e) => console.log("EEEEEEEEEEEEEEEEEEEE"));
 
     if (!setCommands) {
       return;
     }
 
+    const receivedResponse = setCommands as { id: string; name: string }[];
+
+    // const setCommands = await guild.commands
+    //   .set(customGuildCommands)
+    //   .catch(async (e) => {
+    //     const owner = await guild.members
+    //       .fetch(guild.ownerId)
+    //       .catch((e) => console.log(e));
+    //     if (!owner) {
+    //       console.log("Owner not found");
+    //       return;
+    //     }
+    //     log.error(
+    //       `Could not set guild commands on ${guild.name} [${guild.id}]`
+    //     );
+    //     log.error(e.message);
+    //     log.info(
+    //       `Guild owner: ${owner.displayName} aka ${owner.user.username} [${guild.ownerId}]`
+    //     );
+    //     guild.members.fetch(guild.ownerId).then((owner) => {
+    //       owner.createDM().then((dm) => {
+    //         dm.send(
+    //           `I need further permissions to function properly. Please invite me to the server **${guild.name}** (<https://discord.com/channels/${guild.id}>) again using the following link:\n\nhttps://discord.com/api/oauth2/authorize?client_id=${guild.client.user.id}&permissions=36510493760&redirect_uri=http%3A%2F%2Flocalhost&scope=applications.commands%20bot`
+    //         ).then((m) => guild.leave());
+    //       });
+    //     });
+    //   });
+
     guild.commands.permissions.set({
       fullPermissions: (await Promise.all(
-        setCommands.map(
+        receivedResponse.map(
           async (c) =>
             ({
               id: c.id as Snowflake,
@@ -129,6 +147,7 @@ export default abstract class ACommandManager
             } as GuildApplicationCommandPermissionData)
         )
       ).catch((e) => {
+        console.log("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
         return [];
       })) as GuildApplicationCommandPermissionData[],
     });

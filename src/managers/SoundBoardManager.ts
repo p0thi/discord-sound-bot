@@ -27,7 +27,9 @@ export default class SoundBoardManager {
   }
 
   public static getInstance(guildId: string): SoundBoardManager {
-    return SoundBoardManager._instances.get(guildId);
+    const result = SoundBoardManager._instances.get(guildId);
+    if (result && !result.channel?.deleted) return result;
+    return undefined;
   }
 
   async setup(): Promise<boolean> {

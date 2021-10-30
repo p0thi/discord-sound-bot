@@ -1,4 +1,7 @@
-import { SlashCommandBuilder } from "@discordjs/builders";
+import {
+  SlashCommandBuilder,
+  ContextMenuCommandBuilder,
+} from "@discordjs/builders";
 import { APIApplicationCommandOption } from "discord-api-types/payloads/v9";
 import {
   ApplicationCommand,
@@ -14,13 +17,17 @@ import { RawApplicationCommandData } from "discord.js/typings/rawDataTypes";
 import { GroupPermission, groupPermissions } from "../db/models/Guild";
 import DatabaseManager from "../managers/DatabaseManager";
 
-export default class CustomApplicationCommand extends ApplicationCommand {
+export default class CustomApplicationCommand {
   handler: (
     interaction: CommandInteraction | ContextMenuInteraction
   ) => Promise<void>;
   forOwner: boolean = true;
-  options: ApplicationCommandOption[] = [];
   permission: GroupPermission;
+  client: Client;
+  data: RawApplicationCommandData;
+  guild?: Guild;
+  guildData?: Snowflake;
+  apiCommand: SlashCommandBuilder | ContextMenuCommandBuilder;
 
   constructor(
     client: Client,
@@ -28,13 +35,18 @@ export default class CustomApplicationCommand extends ApplicationCommand {
     handler: (
       Interaction: CommandInteraction | ContextMenuInteraction
     ) => Promise<void>,
+    apiCommand: SlashCommandBuilder | ContextMenuCommandBuilder,
     guild?: Guild,
     guildData?: Snowflake,
     forOwner: boolean = true
   ) {
-    super(client, data, guild, guildData);
+    this.client = client;
+    this.data = data;
+    this.guild = guild;
+    this.guildData = guildData;
     this.handler = handler;
     this.forOwner = forOwner;
+    this.apiCommand = apiCommand;
   }
 
   static async getPermissions(

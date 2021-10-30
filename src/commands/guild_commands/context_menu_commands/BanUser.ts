@@ -1,3 +1,5 @@
+import { ContextMenuCommandBuilder } from "@discordjs/builders";
+import { ApplicationCommandType } from "discord-api-types/payloads/v9";
 import {
   Guild,
   CommandInteraction,
@@ -65,9 +67,10 @@ export default class BanUser
       permission,
       create: (): CustomApplicationCommand => {
         return {
-          name: this.name,
-          type: "USER",
-          defaultPermission: this.defaultPermission,
+          apiCommand: new ContextMenuCommandBuilder()
+            .setName(this.name)
+            .setType(ApplicationCommandType.User)
+            .setDefaultPermission(this.defaultPermission),
           handler: async (interaction: ContextMenuInteraction) => {
             interaction.deferReply({ ephemeral: true });
             const memberToBan: GuildMember = interaction.options.getMember(

@@ -20,6 +20,10 @@ import log from "../../../log";
 import DatabaseGuildManager from "../../../managers/DatabaseGuildManager";
 import DatabaseManager from "../../../managers/DatabaseManager";
 import SoundManager from "../../../managers/SoundManager";
+import {
+  SlashCommandBuilder,
+  SlashCommandStringOption,
+} from "@discordjs/builders";
 
 const dbManager = DatabaseManager.getInstance();
 
@@ -66,16 +70,16 @@ export default class CommandsCommand
       defaultPermission: this.defaultPermission,
       create: (): CustomApplicationCommand => {
         return {
-          name: this.name,
-          description: "List all sound commands",
-          defaultPermission: this.defaultPermission,
-          options: [
-            {
-              name: "search",
-              description: "Only show commands containing this",
-              type: "STRING",
-            },
-          ],
+          apiCommand: new SlashCommandBuilder()
+            .setName(this.name)
+            .setDescription("List all sound commands")
+            .setDefaultPermission(this.defaultPermission)
+            .addStringOption(
+              new SlashCommandStringOption()
+                .setName("search")
+                .setDescription("Only show commands containing this")
+                .setRequired(false)
+            ),
           handler: async (interaction: CommandInteraction) => {
             const guild = interaction.guild;
 

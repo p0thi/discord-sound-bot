@@ -1,7 +1,7 @@
 import express from "express";
 import path from "path";
 import btoa from "btoa";
-import fetch from "node-fetch";
+import fetch, { RequestInit } from "node-fetch";
 import jwt from "jsonwebtoken";
 import moment from "moment";
 import AuthManager from "./managers/AuthManager";
@@ -21,24 +21,27 @@ const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const BASE_URL = process.env.BASE_URL;
 
 router.post("/login", (req, res) => {
-  // console.log("body", req.body)
   const code = req.body.code;
-  const redirect = encodeURIComponent(`${req.body.redirect}`);
+  const redirect = `${req.body.redirect}`;
   const creds = btoa(`${CLIENT_ID}:${CLIENT_SECRET}`);
   const url = `https://discord.com/api/oauth2/token`;
-  const body = new URLSearchParams(
-    `grant_type=authorization_code&code=${code}&redirect_uri=${redirect}`
-  );
-  fetch(url, {
+
+  const body = new URLSearchParams();
+  // `grant_type=authorization_code&code=${code}&redirect_uri=${redirect}`
+  body.append("grant_type", "authorization_code");
+  body.append("code", code);
+  body.append("redirect_uri", redirect);
+
+  const params: RequestInit = {
     method: "POST",
+    body,
     headers: {
       Authorization: `Basic ${creds}`,
     },
-    body,
-  }).then((response) => {
+  };
+
+  fetch(url, params).then((response) => {
     response.json().then((json) => {
-      log.debug(json);
-      log.debug(url);
       if (json.error) {
         res.status(500).send({
           status: "error",
@@ -47,11 +50,19 @@ router.post("/login", (req, res) => {
         return;
       }
 
+      if (response.status !== 200) {
+        res.status(500).send({
+          status: "error",
+          message: JSON.stringify(json),
+        });
+        return;
+      }
+
       let scopes = json.scope.split(" ");
       if (!(scopes.includes("identify") && scopes.includes("guilds"))) {
         res
           .status(400)
-          .send({ status: "error", error: `Wrong scopes: ${json.scopes}` });
+          .send({ status: "error", error: `Wrong scopes: ${json.scope}` });
       }
 
       fetch("https://discord.com/api/users/@me", {

@@ -17,7 +17,12 @@ import { v1 as uuid } from "uuid";
 import request from "http-async";
 import IPermissionChangeObserver from "../IPermissionChangeObserver";
 import log from "../../../log";
-import { hyperlink } from "@discordjs/builders";
+import {
+  hyperlink,
+  SlashCommandBuilder,
+  SlashCommandStringOption,
+  SlashCommandSubcommandBuilder,
+} from "@discordjs/builders";
 import DatabaseGuildManager from "../../../managers/DatabaseGuildManager";
 import DatabaseManager from "../../../managers/DatabaseManager";
 import SoundManager from "../../../managers/SoundManager";
@@ -70,56 +75,52 @@ export default class SoundCommand
       permission,
       create: (): CustomApplicationCommand => {
         return {
-          name: this.name,
-          description: "Manage sounds",
-          defaultPermission: this.defaultPermission,
-          options: [
-            {
-              name: "add",
-              description: "Add a sound to the bot",
-              type: "SUB_COMMAND",
-              options: [
-                {
-                  name: "command",
-                  description: "Command of the sound",
-                  required: true,
-                  type: "STRING",
-                },
-                {
-                  name: "description",
-                  description: "Description of the sound",
-                  required: true,
-                  type: "STRING",
-                },
-              ],
-            },
-            {
-              name: "remove",
-              description: "Remove a sound from the bot",
-              type: "SUB_COMMAND",
-              options: [
-                {
-                  name: "command",
-                  description: "Command of the sound",
-                  required: true,
-                  type: "STRING",
-                },
-              ],
-            },
-            {
-              name: "download",
-              description: "Download a sound file from the bot",
-              type: "SUB_COMMAND",
-              options: [
-                {
-                  name: "command",
-                  description: "Command of the sound",
-                  required: true,
-                  type: "STRING",
-                },
-              ],
-            },
-          ],
+          // name: this.name,
+          // description: "Manage sounds",
+          // defaultPermission: this.defaultPermission,
+          apiCommand: new SlashCommandBuilder()
+            .setName(this.name)
+            .setDescription("Manage sounds")
+            .setDefaultPermission(this.defaultPermission)
+            .addSubcommand(
+              new SlashCommandSubcommandBuilder()
+                .setName("add")
+                .setDescription("Add a sound to the bot.")
+                .addStringOption(
+                  new SlashCommandStringOption()
+                    .setName("command")
+                    .setDescription("Command of the sound")
+                    .setRequired(true)
+                )
+                .addStringOption(
+                  new SlashCommandStringOption()
+                    .setName("description")
+                    .setDescription("Description of the sound")
+                    .setRequired(true)
+                )
+            )
+            .addSubcommand(
+              new SlashCommandSubcommandBuilder()
+                .setName("remove")
+                .setDescription("Remove a sound from the bot.")
+                .addStringOption(
+                  new SlashCommandStringOption()
+                    .setName("command")
+                    .setDescription("Command of the sound")
+                    .setRequired(true)
+                )
+            )
+            .addSubcommand(
+              new SlashCommandSubcommandBuilder()
+                .setName("download")
+                .setDescription("Download a sound file from the bot.")
+                .addStringOption(
+                  new SlashCommandStringOption()
+                    .setName("command")
+                    .setDescription("Command of the sound")
+                    .setRequired(true)
+                )
+            ),
           handler: async (interaction: CommandInteraction) => {
             const subCommand = interaction.options.getSubcommand();
 

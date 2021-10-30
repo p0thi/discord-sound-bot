@@ -18,7 +18,16 @@ import IGuildSlashCommand from "../IGuildCommand";
 import IPermissionChangeObserver from "../IPermissionChangeObserver";
 import log from "../../../log";
 import { GroupPermissionKey } from "../../../db/interfaces/IGuild";
-import { codeBlock, roleMention } from "@discordjs/builders";
+import {
+  codeBlock,
+  roleMention,
+  SlashCommandBuilder,
+  SlashCommandIntegerOption,
+  SlashCommandRoleOption,
+  SlashCommandStringOption,
+  SlashCommandSubcommandBuilder,
+  SlashCommandSubcommandGroupBuilder,
+} from "@discordjs/builders";
 import DatabaseGuildManager from "../../../managers/DatabaseGuildManager";
 import DatabaseManager from "../../../managers/DatabaseManager";
 
@@ -80,239 +89,205 @@ export default class PermissionGroupCommand
       defaultPermission: this.defaultPermission,
       permission,
       create: (): CustomApplicationCommand => {
-        const permissionGroups = templateDbGuild.permissionGroups.map(
-          (group) => ({
-            name: group.name,
-            value: group.id,
-          })
-        );
+        const permissionGroups = templateDbGuild.permissionGroups.map<
+          [string, string]
+        >((group) => [group.name, group.id]);
+        const apiCommand = new SlashCommandBuilder()
+          .setName(this.name)
+          .setDescription("Manage permission groups")
+          .setDefaultPermission(this.defaultPermission)
+          .addSubcommand(
+            new SlashCommandSubcommandBuilder()
+              .setName("create")
+              .setDescription("Create a new permission group")
+              .addStringOption(
+                new SlashCommandStringOption()
+                  .setName("name")
+                  .setDescription("The name of the group")
+                  .setRequired(true)
+              )
+              .addIntegerOption(
+                new SlashCommandIntegerOption()
+                  .setName("sound_duration")
+                  .setDescription("Max duration of added sounds")
+                  .setRequired(true)
+              )
+              .addIntegerOption(
+                new SlashCommandIntegerOption()
+                  .setName("sound_amound")
+                  .setDescription("Max amount of sounds per user")
+                  .setRequired(true)
+              )
+          )
+          .addSubcommand(
+            new SlashCommandSubcommandBuilder()
+              .setName("list")
+              .setDescription("List all permission groups")
+          );
+        if (permissionGroups.length > 0) {
+          apiCommand.addSubcommand(
+            new SlashCommandSubcommandBuilder()
+              .setName("delete")
+              .setDescription("Delete a permission group")
+              .addStringOption(
+                new SlashCommandStringOption()
+                  .setName("group")
+                  .setDescription("A group")
+                  .setRequired(true)
+                  .addChoices(permissionGroups)
+              )
+          );
+          apiCommand.addSubcommandGroup(
+            new SlashCommandSubcommandGroupBuilder()
+              .setName("add")
+              .setDescription("Add settings to the group")
+              .addSubcommand(
+                new SlashCommandSubcommandBuilder()
+                  .setName("permission")
+                  .setDescription("Add a permission to the group")
+                  .addStringOption(
+                    new SlashCommandStringOption()
+                      .setName("group")
+                      .setDescription("A group")
+                      .setRequired(true)
+                      .addChoices(permissionGroups)
+                  )
+                  .addStringOption(
+                    new SlashCommandStringOption()
+
+                      .setName("permission")
+                      .setDescription("A permission")
+                      .setRequired(true)
+                      .addChoices(
+                        Object.keys(GroupPermission).map((key) => [key, key])
+                      )
+                  )
+              )
+              .addSubcommand(
+                new SlashCommandSubcommandBuilder()
+                  .setName("role")
+                  .setDescription("Add a role to the group")
+                  .addStringOption(
+                    new SlashCommandStringOption()
+                      .setName("group")
+                      .setDescription("A group")
+                      .setRequired(true)
+                      .addChoices(permissionGroups)
+                  )
+                  .addRoleOption(
+                    new SlashCommandRoleOption()
+                      .setName("role")
+                      .setDescription("A role")
+                      .setRequired(true)
+                  )
+              )
+          );
+          apiCommand.addSubcommandGroup(
+            new SlashCommandSubcommandGroupBuilder()
+              .setName("remove")
+              .setDescription("Remove settings from the group")
+              .addSubcommand(
+                new SlashCommandSubcommandBuilder()
+                  .setName("permission")
+                  .setDescription("Remove a permission from the group")
+                  .addStringOption(
+                    new SlashCommandStringOption()
+                      .setName("group")
+                      .setDescription("A group")
+                      .setRequired(true)
+                      .addChoices(permissionGroups)
+                  )
+                  .addStringOption(
+                    new SlashCommandStringOption()
+                      .setName("permission")
+                      .setDescription("A permission")
+                      .setRequired(true)
+                      .addChoices(
+                        Object.keys(GroupPermission).map((key) => [key, key])
+                      )
+                  )
+              )
+              .addSubcommand(
+                new SlashCommandSubcommandBuilder()
+                  .setName("role")
+                  .setDescription("Remove a role from the group")
+                  .addStringOption(
+                    new SlashCommandStringOption()
+                      .setName("group")
+                      .setDescription("A group")
+                      .setRequired(true)
+                      .addChoices(permissionGroups)
+                  )
+                  .addRoleOption(
+                    new SlashCommandRoleOption()
+                      .setName("role")
+                      .setDescription("A role")
+                      .setRequired(true)
+                  )
+              )
+          );
+          apiCommand.addSubcommandGroup(
+            new SlashCommandSubcommandGroupBuilder()
+              .setName("edit")
+              .setDescription("Edit group settings")
+              .addSubcommand(
+                new SlashCommandSubcommandBuilder()
+                  .setName("name")
+                  .setDescription("Edit name of a group")
+                  .addStringOption(
+                    new SlashCommandStringOption()
+                      .setName("group")
+                      .setDescription("A group")
+                      .setRequired(true)
+                      .addChoices(permissionGroups)
+                  )
+                  .addStringOption(
+                    new SlashCommandStringOption()
+                      .setName("name")
+                      .setDescription("The new name")
+                      .setRequired(true)
+                  )
+              )
+              .addSubcommand(
+                new SlashCommandSubcommandBuilder()
+                  .setName("sound_duration")
+                  .setDescription("Edit sound max duration of a group")
+                  .addStringOption(
+                    new SlashCommandStringOption()
+                      .setName("group")
+                      .setDescription("A group")
+                      .setRequired(true)
+                      .addChoices(permissionGroups)
+                  )
+                  .addIntegerOption(
+                    new SlashCommandIntegerOption()
+                      .setName("duration")
+                      .setDescription("The new max duration")
+                      .setRequired(true)
+                  )
+              )
+              .addSubcommand(
+                new SlashCommandSubcommandBuilder()
+                  .setName("sound_amount")
+                  .setDescription("Edit sound max amount of a group")
+                  .addStringOption(
+                    new SlashCommandStringOption()
+                      .setName("group")
+                      .setDescription("A group")
+                      .setRequired(true)
+                      .addChoices(permissionGroups)
+                  )
+                  .addIntegerOption(
+                    new SlashCommandIntegerOption()
+                      .setName("amount")
+                      .setDescription("The new max amount")
+                      .setRequired(true)
+                  )
+              )
+          );
+        }
         return {
-          name: this.name,
-          description: "Manage permission groups",
-          defaultPermission: this.defaultPermission,
-          options: [
-            {
-              name: "create",
-              description: "Create a permission group",
-              type: "SUB_COMMAND",
-              options: [
-                {
-                  name: "name",
-                  description: "The name of the permission group",
-                  required: true,
-                  type: "STRING",
-                },
-                {
-                  name: "sound_duration",
-                  description: "Max duration of added sounds",
-                  required: true,
-                  type: "INTEGER",
-                },
-                {
-                  name: "sound_amount",
-                  description: "Max amount of sounds per user",
-                  required: true,
-                  type: "INTEGER",
-                },
-              ],
-            },
-            {
-              name: "list",
-              description: "List all permission groups",
-              type: "SUB_COMMAND",
-            },
-            ...(permissionGroups.length > 0
-              ? [
-                  {
-                    name: "delete",
-                    description: "Delete a permission group",
-                    type: "SUB_COMMAND",
-                    options: [
-                      {
-                        name: "group",
-                        description: "A group",
-                        type: "STRING",
-                        required: true,
-                        choices: permissionGroups,
-                      },
-                    ],
-                  },
-                  {
-                    name: "add",
-                    description: "Add settings to the group",
-                    type: "SUB_COMMAND_GROUP",
-                    options: [
-                      {
-                        name: "permission",
-                        description: "Add a permission to the group",
-                        type: "SUB_COMMAND",
-                        options: [
-                          {
-                            name: "group",
-                            description: "A group",
-                            type: "STRING",
-                            required: true,
-                            choices: permissionGroups,
-                          },
-                          {
-                            name: "permission",
-                            description: "A permission",
-                            type: "STRING",
-                            required: true,
-                            choices: Object.keys(GroupPermission).map(
-                              (key) => ({
-                                name: key,
-                                value: key,
-                              })
-                            ),
-                          },
-                        ],
-                      },
-                      {
-                        name: "role",
-                        description: "Add a role to the group",
-                        type: "SUB_COMMAND",
-                        options: [
-                          {
-                            name: "group",
-                            description: "A group",
-                            type: "STRING",
-                            required: true,
-                            choices: permissionGroups,
-                          },
-                          {
-                            name: "role",
-                            description: "A role",
-                            type: "ROLE",
-                            required: true,
-                          },
-                        ],
-                      },
-                    ],
-                  },
-                  {
-                    name: "remove",
-                    description: "Remove settings from the group",
-                    type: "SUB_COMMAND_GROUP",
-                    options: [
-                      {
-                        name: "permission",
-                        description: "Remove a permission from the group",
-                        type: "SUB_COMMAND",
-                        options: [
-                          {
-                            name: "group",
-                            description: "A group",
-                            type: "STRING",
-                            required: true,
-                            choices: permissionGroups,
-                          },
-                          {
-                            name: "permission",
-                            description: "A permission",
-                            type: "STRING",
-                            required: true,
-                            choices: Object.keys(GroupPermission).map(
-                              (key) => ({
-                                name: key,
-                                value: key,
-                              })
-                            ),
-                          },
-                        ],
-                      },
-                      {
-                        name: "role",
-                        description: "Remove a role from the group",
-                        type: "SUB_COMMAND",
-                        options: [
-                          {
-                            name: "group",
-                            description: "A group",
-                            type: "STRING",
-                            required: true,
-                            choices: permissionGroups,
-                          },
-                          {
-                            name: "role",
-                            description: "A role",
-                            type: "ROLE",
-                            required: true,
-                          },
-                        ],
-                      },
-                    ],
-                  },
-                  {
-                    name: "edit",
-                    description: "Edit group settings",
-                    type: "SUB_COMMAND_GROUP",
-                    options: [
-                      {
-                        name: "name",
-                        description: "Edit name of a group",
-                        type: "SUB_COMMAND",
-                        options: [
-                          {
-                            name: "group",
-                            description: "A group",
-                            type: "STRING",
-                            required: true,
-                            choices: permissionGroups,
-                          },
-                          {
-                            name: "name",
-                            description: "A new name",
-                            type: "STRING",
-                            required: true,
-                          },
-                        ],
-                      },
-                      {
-                        name: "sound_duration",
-                        description: "Edit sound max duration of a group",
-                        type: "SUB_COMMAND",
-                        options: [
-                          {
-                            name: "group",
-                            description: "A group",
-                            type: "STRING",
-                            required: true,
-                            choices: permissionGroups,
-                          },
-                          {
-                            name: "duration",
-                            description: "A new max duration",
-                            type: "INTEGER",
-                            required: true,
-                          },
-                        ],
-                      },
-                      {
-                        name: "sound_amount",
-                        description: "Edit sound max amount of a group",
-                        type: "SUB_COMMAND",
-                        options: [
-                          {
-                            name: "group",
-                            description: "A group",
-                            type: "STRING",
-                            required: true,
-                            choices: permissionGroups,
-                          },
-                          {
-                            name: "amount",
-                            description: "A new amount",
-                            type: "INTEGER",
-                            required: true,
-                          },
-                        ],
-                      },
-                    ],
-                  },
-                ]
-              : []),
-          ],
+          apiCommand,
           handler: async (interaction: CommandInteraction) => {
             interaction.deferReply({ ephemeral: true });
 

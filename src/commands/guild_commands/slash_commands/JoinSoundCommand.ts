@@ -19,6 +19,11 @@ import IPermissionChangeObserver from "../IPermissionChangeObserver";
 import log from "../../../log";
 import DatabaseGuildManager from "../../../managers/DatabaseGuildManager";
 import DatabaseManager from "../../../managers/DatabaseManager";
+import {
+  SlashCommandBuilder,
+  SlashCommandStringOption,
+  SlashCommandSubcommandBuilder,
+} from "@discordjs/builders";
 
 const dbManager = DatabaseManager.getInstance();
 
@@ -70,29 +75,27 @@ export default class JoinSoundCommand
       permission,
       create: (): CustomApplicationCommand => {
         return {
-          name: this.name,
-          description: "Manage your join sound",
-          defaultPermission: this.defaultPermission,
-          options: [
-            {
-              name: "set",
-              description: "Set your join sound for this server",
-              type: "SUB_COMMAND",
-              options: [
-                {
-                  name: "command",
-                  description: "Command of the sound",
-                  required: true,
-                  type: "STRING",
-                },
-              ],
-            },
-            {
-              name: "disable",
-              description: "Disables your join sound for this server",
-              type: "SUB_COMMAND",
-            },
-          ],
+          apiCommand: new SlashCommandBuilder()
+            .setName(this.name)
+            .setDescription("Manage your join sound")
+            .setDefaultPermission(this.defaultPermission)
+            .addSubcommand(
+              new SlashCommandSubcommandBuilder()
+                .setName("set")
+                .setDescription("Set your join sound for this server")
+                .addStringOption(
+                  new SlashCommandStringOption()
+                    .setName("command")
+                    .setDescription("Command of the sound")
+                    .setRequired(true)
+                )
+            )
+            .addSubcommand(
+              new SlashCommandSubcommandBuilder()
+                .setName("disable")
+                .setDescription("Disable your join sound for this server")
+            ),
+
           handler: async (interaction: CommandInteraction) => {
             const subCommand = interaction.options.getSubcommand();
 

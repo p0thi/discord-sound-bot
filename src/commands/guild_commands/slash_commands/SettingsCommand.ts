@@ -27,7 +27,13 @@ import log from "../../../log";
 import { GroupPermissionKey } from "../../../db/interfaces/IGuild";
 import Conversation from "../../../Conversation";
 import MessageDeleter from "../../../MessageDeleter";
-import { codeBlock } from "@discordjs/builders";
+import {
+  codeBlock,
+  SlashCommandBuilder,
+  SlashCommandNumberOption,
+  SlashCommandStringOption,
+  SlashCommandSubcommandBuilder,
+} from "@discordjs/builders";
 import DatabaseGuildManager from "../../../managers/DatabaseGuildManager";
 import DatabaseManager from "../../../managers/DatabaseManager";
 
@@ -86,59 +92,56 @@ export default class SettingsCommand
       permission,
       create: (): CustomApplicationCommand => {
         return {
-          name: this.name,
-          description: "Change the server settings",
-          defaultPermission: this.defaultPermission,
-          options: [
-            {
-              name: "prefix",
-              description: "Change the server command prefix",
-              type: "SUB_COMMAND",
-              options: [
-                {
-                  name: "prefix",
-                  description: "The new command prefix",
-                  required: true,
-                  type: "STRING",
-                  choices: [
-                    "!",
-                    "#",
-                    "+",
-                    "-",
-                    "$",
-                    "§",
-                    "%",
-                    "&",
-                    ")",
-                    ")",
-                    "=",
-                    "?",
-                    "`",
-                    "'",
-                    "|",
-                    "[",
-                    "]",
-                    "^",
-                    ":",
-                    ";",
-                  ].map((prefix) => ({ name: prefix, value: prefix })),
-                },
-              ],
-            },
-            {
-              name: "volume",
-              description: "Change the server sound volume multyplier",
-              type: "SUB_COMMAND",
-              options: [
-                {
-                  name: "volume",
-                  description: "The new sound volume",
-                  required: true,
-                  type: "NUMBER",
-                },
-              ],
-            },
-          ],
+          apiCommand: new SlashCommandBuilder()
+            .setName(this.name)
+            .setDescription("Change the server settings")
+            .setDefaultPermission(this.defaultPermission)
+            .addSubcommand(
+              new SlashCommandSubcommandBuilder()
+                .setName("prefix")
+                .setDescription("Change the server command prefix")
+                .addStringOption(
+                  new SlashCommandStringOption()
+                    .setName("prefix")
+                    .setDescription("The new command prefix")
+                    .setRequired(true)
+                    .addChoices(
+                      [
+                        "!",
+                        "#",
+                        "+",
+                        "-",
+                        "$",
+                        "§",
+                        "%",
+                        "&",
+                        ")",
+                        ")",
+                        "=",
+                        "?",
+                        "`",
+                        "'",
+                        "|",
+                        "[",
+                        "]",
+                        "^",
+                        ":",
+                        ";",
+                      ].map((prefix) => [prefix, prefix])
+                    )
+                )
+            )
+            .addSubcommand(
+              new SlashCommandSubcommandBuilder()
+                .setName("volume")
+                .setDescription("Change the server sound volume multyplier")
+                .addNumberOption(
+                  new SlashCommandNumberOption()
+                    .setName("volume")
+                    .setDescription("The new volume multiplier")
+                    .setRequired(true)
+                )
+            ),
           handler: async (interaction: CommandInteraction) => {
             interaction.deferReply({ ephemeral: true });
             const subCommand = interaction.options.getSubcommand();

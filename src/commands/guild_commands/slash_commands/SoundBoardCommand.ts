@@ -22,6 +22,10 @@ import DatabaseGuildManager from "../../../managers/DatabaseGuildManager";
 import DatabaseManager from "../../../managers/DatabaseManager";
 import SoundManager from "../../../managers/SoundManager";
 import SoundBoardManager from "../../../managers/SoundBoardManager";
+import {
+  SlashCommandBuilder,
+  SlashCommandSubcommandBuilder,
+} from "@discordjs/builders";
 
 const dbManager = DatabaseManager.getInstance();
 
@@ -70,22 +74,21 @@ export default class SoundBoardCommand
       defaultPermission: this.defaultPermission,
       create: (): CustomApplicationCommand => {
         return {
-          name: this.name,
-          description: "Manage the sound board channel",
           permission: this.permission,
-          defaultPermission: this.defaultPermission,
-          options: [
-            {
-              name: "set",
-              description: "Set the sound board channel",
-              type: "SUB_COMMAND",
-            },
-            {
-              name: "unset",
-              description: "Unset the sound board channel",
-              type: "SUB_COMMAND",
-            },
-          ],
+          apiCommand: new SlashCommandBuilder()
+            .setName(this.name)
+            .setDescription("Manage the sound board channel")
+            .setDefaultPermission(this.defaultPermission)
+            .addSubcommand(
+              new SlashCommandSubcommandBuilder()
+                .setName("set")
+                .setDescription("Set the sound board channel")
+            )
+            .addSubcommand(
+              new SlashCommandSubcommandBuilder()
+                .setName("unset")
+                .setDescription("Unset the sound board channel")
+            ),
           handler: async (interaction: CommandInteraction) => {
             const guild = interaction.guild;
 

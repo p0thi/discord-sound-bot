@@ -43,7 +43,7 @@ export default class AuthManager {
             client_secret: process.env.CLIENT_SECRET,
             redirect_uri: `${BASE_URL}/api/auth/callback`,
             scope: "identify guilds",
-          }),
+          }).toString(),
         }
       );
       let json = await newResponse.json();

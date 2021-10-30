@@ -57,9 +57,7 @@ export default class ContextMenuCommandManager extends ACommandManager {
   async start() {
     this.bot.on("interactionCreate", this.handle);
     this.bot.application.commands.set(
-      ContextMenuCommandCreator.globalCommands.map(
-        (c) => c as ApplicationCommandData
-      )
+      ContextMenuCommandCreator.globalCommands.map((c) => c.apiCommand.toJSON())
     );
   }
 
@@ -67,7 +65,7 @@ export default class ContextMenuCommandManager extends ACommandManager {
     if (!interaction.isContextMenu()) return;
 
     for (const cmd of ContextMenuCommandCreator.globalCommands) {
-      if (interaction.commandName === cmd.name) {
+      if (interaction.commandName === cmd.apiCommand.name) {
         cmd.handler(interaction as CommandInteraction);
         return;
       }

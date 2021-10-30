@@ -4,7 +4,7 @@
     "outDir": "./dist/",
     "moduleResolution": "node",
     "target": "ES2021",
-    "lib": ["es2020", "dom"],
+    "lib": ["es2020", "dom", "DOM.Iterable"],
     "sourceMap": true,
     "types": [
       // add node as an option

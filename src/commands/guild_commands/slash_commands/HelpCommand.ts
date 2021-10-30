@@ -1,8 +1,15 @@
-import { hyperlink } from "@discordjs/builders";
+import {
+  hyperlink,
+  SlashCommandBuilder,
+  ToAPIApplicationCommandOptions,
+} from "@discordjs/builders";
+import {
+  APIApplicationCommandOption,
+  ApplicationCommandOptionType,
+} from "discord-api-types";
 import {
   ApplicationCommand,
   ApplicationCommandOption,
-  ApplicationCommandOptionType,
   CommandInteraction,
   EmbedField,
   Guild,
@@ -69,10 +76,10 @@ export default class HelpCommand
       defaultPermission: this.defaultPermission,
       create: (): CustomApplicationCommand => {
         return {
-          name: this.name,
-          description: "Shows help message",
-          type: "CHAT_INPUT",
-          defaultPermission: this.defaultPermission,
+          apiCommand: new SlashCommandBuilder()
+            .setName(this.name)
+            .setDescription("Shows help message")
+            .setDefaultPermission(this.defaultPermission),
           async handler(interaction: CommandInteraction) {
             interaction.deferReply({ ephemeral: true });
             const guild = interaction.guild;
@@ -168,28 +175,38 @@ export default class HelpCommand
   ): LayerDescription {
     const command = template.create();
     const result: LayerDescription = {
-      name: command.name,
-      description: command.description,
-      type: "COMMAND",
+      name: command.apiCommand.name,
+
+      type: 0,
       permission: groupPermissions.get(template.permission),
-      options: command.options?.map(HelpCommand.optionToDescriptionLayer),
+      // options: command.apiCommand.toJSON().options?.map(HelpCommand.optionToDescriptionLayer),
     };
+    if (command.apiCommand instanceof SlashCommandBuilder) {
+      result.options = command.apiCommand.options
+        ?.map((option) => option.toJSON())
+        .map(HelpCommand.optionToDescriptionLayer);
+      result.description = command.apiCommand.description;
+    }
     return result;
   }
 
   private static optionToDescriptionLayer(
-    option: ApplicationCommandOption
+    option: APIApplicationCommandOption
   ): LayerDescription {
     const result: LayerDescription = {
       name: option.name,
       description: option.description,
       type: option.type,
-      required: option.required,
     };
-    if (option.type === "SUB_COMMAND_GROUP" || option.type === "SUB_COMMAND") {
+    if (
+      option.type === ApplicationCommandOptionType.SubcommandGroup ||
+      option.type === ApplicationCommandOptionType.Subcommand
+    ) {
       result.options = option.options?.map(
         HelpCommand.optionToDescriptionLayer
       );
+    } else {
+      result.required = option.required;
     }
     return result;
   }
@@ -216,9 +233,9 @@ export default class HelpCommand
 
 export interface LayerDescription {
   name: string;
-  type: ApplicationCommandOptionType | "COMMAND";
+  type: ApplicationCommandOptionType | 0;
   permission?: GroupPermissionKey;
-  description: string;
+  description?: string;
   required?: boolean;
   options?: LayerDescription[];
 }
