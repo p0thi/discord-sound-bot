@@ -1,6 +1,5 @@
 import DatabaseManager from "./DatabaseManager";
 import ffmpegStatic from "ffmpeg-static";
-// import ffprobeStatic from "ffprobe-static";
 import FfmpegCommand from "fluent-ffmpeg";
 
 import {
@@ -22,6 +21,7 @@ import ISound from "../db/interfaces/ISound";
 import log from "../log";
 import { RateLimiterMemory, RateLimiterRes } from "rate-limiter-flexible";
 import IGuild from "../db/interfaces/IGuild";
+import FixedLengthQueue from "../helper-classes/FixedLengthQueue";
 
 const dbManager = DatabaseManager.getInstance();
 const rateLimiter = new RateLimiterMemory({
@@ -35,10 +35,8 @@ export default class AudioManager {
     string,
     (newState: VoiceConnectionState, oldState: VoiceConnectionState) => void
   >();
-  private static _playingResolves = new Map<
-    string,
-    (value: void | PromiseLike<void>) => void
-  >();
+  private static _guildConnectionDatesQueue = new Map<string, FixedLengthQueue<Date>>()
+  private static _guildDisconnectTimers = new Map<string, NodeJS.Timeout>()
 
   async memberPlaySound(
     member: GuildMember,
@@ -107,6 +105,16 @@ export default class AudioManager {
         return;
       }
 
+      if (!AudioManager._guildConnectionDatesQueue.has(channel.guild.id)) {
+        AudioManager._guildConnectionDatesQueue.set(channel.guild.id, new FixedLengthQueue<Date>(3))
+      }
+      const queue = AudioManager._guildConnectionDatesQueue.get(channel.guild.id);
+
+      queue.push(new Date())
+
+      log.debug("queue")
+      log.debug(queue.length)
+
       log.info(`playing sound "${sound.command}" in ${channel.guild.name}`);
 
       const meanVolume = await AudioManager.getAudioFileMeanVolume(
@@ -143,12 +151,32 @@ export default class AudioManager {
         resource.volume?.setVolumeDecibels(-15);
       }
 
+      this.deleteGuildTimeout(channel.guild.id)
+
       player.pause();
       player.play(resource);
+      // player.listeners<AudioPlayerStatus.Idle>(AudioPlayerStatus.Idle).forEach(listener => {
+      //   player.re
+      // })
+      player.removeAllListeners(AudioPlayerStatus.Idle)
       player.once(AudioPlayerStatus.Idle, () => {
         resolve();
         AudioManager._guildAudioPlayers.delete(channel.guild.id);
-        getVoiceConnection(channel.guild.id).disconnect();
+
+        if (true) { // TODO make guild setting
+          const secondsMovingAverage = (queue.lastItem.getTime() - queue.firstItem.getTime()) / 1000;
+
+          if (queue.isFull && secondsMovingAverage < 40) {
+            AudioManager._guildDisconnectTimers.set(channel.guild.id, setTimeout(() => {
+              getVoiceConnection(channel.guild.id).disconnect();
+              AudioManager._guildDisconnectTimers.delete(channel.guild.id)
+            }, 20000))
+          } else {
+            getVoiceConnection(channel.guild.id).disconnect();
+          }
+        } else {
+          getVoiceConnection(channel.guild.id).disconnect();
+        }
       });
       player.once(AudioPlayerStatus.Paused, () => {
         resolve();
@@ -194,6 +222,12 @@ export default class AudioManager {
     });
   }
 
+  private deleteGuildTimeout(guildId: string) {
+    const timer = AudioManager._guildDisconnectTimers.get(guildId)
+    if (timer) clearTimeout(timer)
+    AudioManager._guildDisconnectTimers.delete(guildId)
+  }
+
   private static async getAudioFileMeanVolume(sound: ISound): Promise<number> {
     if (sound.meanVolume) {
       return sound.meanVolume;
@@ -228,7 +262,6 @@ export default class AudioManager {
     }
 
     sound.meanVolume = meanVolume;
-    console.log(sound);
     await sound.save().catch((e) => {});
     return meanVolume;
   }

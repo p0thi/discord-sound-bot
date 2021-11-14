@@ -1418,7 +1418,7 @@ mongoose-valid8@>=1.7.1:
     lodash ">=4.17.21"
     validator ">=13.6.0"
 
-mongoose@>=6.0.7, mongoose@^6.0.7:
+mongoose@>=6.0.7, mongoose@^6.0.12:
   version "6.0.12"
   resolved "https://registry.yarnpkg.com/mongoose/-/mongoose-6.0.12.tgz#a22727d52ca9e9ce3996330b895afe5cde75af3c"
   integrity sha512-BvsZk7zEEhb1AgQFLtxN9C+7qgy5edRuA3ZDDwHU+kHG/HM44vI6FdKV5m6HVdAUeCHHQTiVv+YQh8BRsToSHw==
