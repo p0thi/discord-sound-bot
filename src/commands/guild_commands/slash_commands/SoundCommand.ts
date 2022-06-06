@@ -44,12 +44,7 @@ export default class SoundCommand
     super();
     this.guild = guild;
   }
-  notifyPermissionObservers(permissions: GroupPermission[]): Promise<void> {
-    throw new Error("Method not implemented.");
-  }
-  addPermissionObserver(observer: IPermissionChangeObserver): void {
-    throw new Error("Method not implemented.");
-  }
+
   public static getInstance(guild: Guild): SoundCommand {
     if (SoundCommand._tournamentCommands.has(guild)) {
       return SoundCommand._tournamentCommands.get(guild);

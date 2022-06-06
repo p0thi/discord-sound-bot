@@ -47,12 +47,7 @@ export default class HelpCommand
     super();
     this.guild = guild;
   }
-  notifyPermissionObservers(permissions: GroupPermission[]): Promise<void> {
-    throw new Error("Method not implemented.");
-  }
-  addPermissionObserver(observer: IPermissionChangeObserver): void {
-    throw new Error("Method not implemented.");
-  }
+
   public static getInstance(guild: Guild): HelpCommand {
     if (HelpCommand._helpCommands.has(guild)) {
       return HelpCommand._helpCommands.get(guild);

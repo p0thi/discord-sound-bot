@@ -44,13 +44,6 @@ export default class UnbanUser
     return instance;
   }
 
-  notifyPermissionObservers(permissions: GroupPermission[]): Promise<void> {
-    throw new Error("Method not implemented.");
-  }
-  addPermissionObserver(observer: IPermissionChangeObserver): void {
-    throw new Error("Method not implemented.");
-  }
-
   async notifyObservers() {
     await Promise.all(
       this.observers.map((observer) => observer.commandChangeObserved(this))

@@ -49,17 +49,6 @@ export default class PermissionGroupCommand
     super();
     this.guild = guild;
   }
-  addPermissionObserver(observer: IPermissionChangeObserver) {
-    this._permissionObservers.push(observer);
-  }
-
-  async notifyPermissionObservers(permissions: GroupPermission[]) {
-    await Promise.all(
-      this._permissionObservers.map((observer) =>
-        observer.onPermissionsChange(this.guild, permissions)
-      )
-    );
-  }
 
   public static getInstance(guild: Guild): PermissionGroupCommand {
     if (PermissionGroupCommand._permissionGroupCommands.has(guild)) {
@@ -339,16 +328,7 @@ export default class PermissionGroupCommand
                         group.discordRoles.push(role.id);
                         await group.ownerDocument().save();
 
-                        if (
-                          group.permissions.length > 0 &&
-                          group.discordRoles.length > 0
-                        ) {
-                          await this.notifyPermissionObservers(
-                            group.permissions.map((p) =>
-                              reverseGroupPermissions.get(p)
-                            )
-                          );
-                        }
+
                         interaction.followUp({
                           content: `The role ${role.name} has been added to the group ${group.name}`,
                           ephemeral: true,
@@ -382,14 +362,7 @@ export default class PermissionGroupCommand
 
                         group.permissions.push(permission);
                         await group.ownerDocument().save();
-                        if (
-                          group.permissions.length > 0 &&
-                          group.discordRoles.length > 0
-                        ) {
-                          await this.notifyPermissionObservers([
-                            reverseGroupPermissions.get(permission),
-                          ]);
-                        }
+
                         interaction.followUp({
                           content: `The permission ${permission} has been added to the group ${group.name}`,
                           ephemeral: true,
@@ -429,13 +402,6 @@ export default class PermissionGroupCommand
                         );
                         await group.ownerDocument().save();
 
-                        if (group.permissions.length > 0) {
-                          await this.notifyPermissionObservers(
-                            group.permissions.map((p) =>
-                              reverseGroupPermissions.get(p)
-                            )
-                          );
-                        }
                         interaction.followUp({
                           content: `The role ${role.name} has been removed from the group ${group.name}`,
                           ephemeral: true,
@@ -472,11 +438,7 @@ export default class PermissionGroupCommand
                           1
                         );
                         await group.ownerDocument().save();
-                        if (group.discordRoles.length > 0) {
-                          await this.notifyPermissionObservers([
-                            reverseGroupPermissions.get(permission),
-                          ]);
-                        }
+
                         interaction.followUp({
                           content: `The permission ${permission} has been removed from the group ${group.name}`,
                           ephemeral: true,
@@ -725,9 +687,7 @@ export default class PermissionGroupCommand
                         log.error("Could not save guild to database");
                       });
                       await this.notifyObservers();
-                      await this.notifyPermissionObservers(
-                        group.permissions.map((p) => GroupPermission[p])
-                      );
+
                       interaction.followUp({
                         content: `Deleted group ${group.name}`,
                         ephemeral: true,

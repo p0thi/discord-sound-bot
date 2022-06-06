@@ -42,12 +42,7 @@ export default class JoinSoundCommand
     super();
     this.guild = guild;
   }
-  notifyPermissionObservers(permissions: GroupPermission[]): Promise<void> {
-    throw new Error("Method not implemented.");
-  }
-  addPermissionObserver(observer: IPermissionChangeObserver): void {
-    throw new Error("Method not implemented.");
-  }
+
   public static getInstance(guild: Guild): JoinSoundCommand {
     if (JoinSoundCommand._joinSoundCommands.has(guild)) {
       return JoinSoundCommand._joinSoundCommands.get(guild);

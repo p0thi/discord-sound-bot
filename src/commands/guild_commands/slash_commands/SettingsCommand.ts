@@ -55,17 +55,6 @@ export default class SettingsCommand
     super();
     this.guild = guild;
   }
-  addPermissionObserver(observer: IPermissionChangeObserver): void {
-    throw new Error("Method not implemented.");
-  }
-
-  async notifyPermissionObservers(permissions: GroupPermission[]) {
-    await Promise.all(
-      this._permissionObservers.map((observer) =>
-        observer.onPermissionsChange(this.guild, permissions)
-      )
-    );
-  }
 
   public static getInstance(guild: Guild): SettingsCommand {
     if (SettingsCommand._settingsCommands.has(guild)) {

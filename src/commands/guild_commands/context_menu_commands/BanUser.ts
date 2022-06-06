@@ -34,9 +34,7 @@ export default class BanUser
     super();
     this.guild = guild;
   }
-  notifyPermissionObservers(permissions: GroupPermission[]): Promise<void> {
-    throw new Error("Method not implemented.");
-  }
+
   public static getInstance(guild: Guild): BanUser {
     if (BanUser._banUserCommands.has(guild)) {
       return BanUser._banUserCommands.get(guild);
@@ -44,10 +42,6 @@ export default class BanUser
     const instance = new BanUser(guild);
     BanUser._banUserCommands.set(guild, instance);
     return instance;
-  }
-
-  addPermissionObserver(observer: IPermissionChangeObserver): void {
-    throw new Error("Method not implemented.");
   }
 
   async notifyObservers() {

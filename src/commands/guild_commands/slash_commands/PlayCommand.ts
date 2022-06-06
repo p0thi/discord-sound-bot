@@ -43,12 +43,7 @@ export default class PlayCommand
     super();
     this.guild = guild;
   }
-  notifyPermissionObservers(permissions: GroupPermission[]): Promise<void> {
-    throw new Error("Method not implemented.");
-  }
-  addPermissionObserver(observer: IPermissionChangeObserver): void {
-    throw new Error("Method not implemented.");
-  }
+
   public static getInstance(guild: Guild): PlayCommand {
     if (PlayCommand._playCommands.has(guild)) {
       return PlayCommand._playCommands.get(guild);

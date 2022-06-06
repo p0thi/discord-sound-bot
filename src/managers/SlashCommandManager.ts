@@ -49,9 +49,6 @@ export default class SlashCommandManager extends ACommandManager {
 
         guildSlashCommands.forEach(async (slashCommand) => {
           slashCommand.addObserver(this);
-          if (slashCommand.canChangePermission) {
-            slashCommand.addPermissionObserver(this);
-          }
         });
 
         const guildSlashCommandTemplates = await Promise.all(
