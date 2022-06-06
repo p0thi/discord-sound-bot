@@ -133,24 +133,24 @@ export default abstract class ACommandManager
     //     });
     //   });
 
-    guild.commands.permissions.set({
-      fullPermissions: (await Promise.all(
-        receivedResponse.map(
-          async (c) =>
-            ({
-              id: c.id as Snowflake,
-              permissions:
-                await ACommandManager.getPermissionForTemplateAndGuild(
-                  guildTemplates.find((i) => i.name === c.name),
-                  guild
-                ),
-            } as GuildApplicationCommandPermissionData)
-        )
-      ).catch((e) => {
-        console.log("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
-        return [];
-      })) as GuildApplicationCommandPermissionData[],
-    });
+    // guild.commands.permissions.set({
+    //   fullPermissions: (await Promise.all(
+    //     receivedResponse.map(
+    //       async (c) =>
+    //         ({
+    //           id: c.id as Snowflake,
+    //           permissions:
+    //             await ACommandManager.getPermissionForTemplateAndGuild(
+    //               guildTemplates.find((i) => i.name === c.name),
+    //               guild
+    //             ),
+    //         } as GuildApplicationCommandPermissionData)
+    //     )
+    //   ).catch((e) => {
+    //     console.log("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
+    //     return [];
+    //   })) as GuildApplicationCommandPermissionData[],
+    // });
   }
 
   static async editGuildCommandsPermissions(
