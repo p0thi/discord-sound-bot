@@ -13,8 +13,9 @@ export default class JoinHandler {
   }
 
   start() {
-    this.bot.on("voiceStateUpdate", (oldState, newState) =>
-      this.handle(oldState, newState)
+    this.bot.on("voiceStateUpdate", (oldState, newState) => {
+          this.handle(oldState, newState).catch(() => {});
+        }
     );
   }
 
